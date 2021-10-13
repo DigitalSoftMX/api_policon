@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateSaleClientsTable extends Migration
+class CreateSalesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,16 @@ class CreateSaleClientsTable extends Migration
      */
     public function up()
     {
-        Schema::create('sale_clients', function (Blueprint $table) {
+        Schema::create('sales', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('sale_id');
+            $table->string('sale');
+            $table->double('liters');
+            $table->double('payment');
+            $table->unsignedBigInteger('station_id');
             $table->unsignedBigInteger('client_id');
+            $table->timestamps();
 
-            $table->foreign('sale_id')->references('id')->on('users')
+            $table->foreign('station_id')->references('id')->on('station')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
 
@@ -35,6 +39,6 @@ class CreateSaleClientsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('sale_clients');
+        Schema::dropIfExists('sales');
     }
 }

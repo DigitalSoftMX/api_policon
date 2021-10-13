@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-class CreateSchedulesTable extends Migration
+class CreateExcelSalesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,15 @@ class CreateSchedulesTable extends Migration
      */
     public function up()
     {
-        Schema::create('schedules', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->string('name');
-            $table->string('start');
-            $table->string('end');
+        Schema::create('excel_sales', function (Blueprint $table) {
+            $table->id();
             $table->unsignedBigInteger('station_id');
+            $table->string('ticket');
+            $table->string('date');
+            $table->string('product');
+            $table->double('liters');
+            $table->double('payment');
+            $table->string('payment_type');
             $table->timestamps();
 
             $table->foreign('station_id')->references('id')->on('station')
@@ -34,6 +37,6 @@ class CreateSchedulesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('schedules');
+        Schema::dropIfExists('excel_sales');
     }
 }

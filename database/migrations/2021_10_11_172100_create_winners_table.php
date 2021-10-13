@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-class CreateIslandsTable extends Migration
+class CreateWinnersTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,15 @@ class CreateIslandsTable extends Migration
      */
     public function up()
     {
-        Schema::create('islands', function (Blueprint $table) {
-            $table->bigIncrements('id');
+        Schema::create('winners', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('client_id');
             $table->unsignedBigInteger('station_id');
-            $table->integer('island');
-            $table->integer('bomb');
             $table->timestamps();
+
+            $table->foreign('client_id')->references('id')->on('clients')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
 
             $table->foreign('station_id')->references('id')->on('station')
                 ->onDelete('cascade')
@@ -33,6 +36,6 @@ class CreateIslandsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('islands');
+        Schema::dropIfExists('winners');
     }
 }

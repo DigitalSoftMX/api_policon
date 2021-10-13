@@ -17,28 +17,13 @@ class CreateStationTable extends Migration
             $table->bigIncrements('id');
             $table->string('name');
             $table->string('address');
-            $table->string('phone');
-            $table->string('email');
-            $table->integer('total_timbres')->nullable();
-            $table->integer('total_facturas')->nullable();
-            $table->unsignedBigInteger('id_empresa');
-            $table->unsignedBigInteger('id_type')->nullable();
-            $table->string('number_station', 5);
-            $table->integer('active')->nullable();
-            $table->boolean('lealtad');
-            $table->string('dns')->nullable();
-            $table->timestamp('fail')->nullable();
-            $table->string('ip')->nullable();
-            $table->string('image');
+            $table->string('phone')->unique()->nullable();
+            $table->string('email')->unique()->nullable();
+            $table->string('number_station', 10);
+            $table->string('image')->nullable();
+            $table->integer('winner')->default(0);
+            $table->integer('active')->default(1);
             $table->timestamps();
-
-            $table->foreign('id_empresa')->references('id')->on('empresas')
-                ->onDelete('cascade')
-                ->onUpdate('cascade');
-
-            $table->foreign('id_type')->references('id')->on('cat_type')
-                ->onDelete('cascade')
-                ->onUpdate('cascade');
         });
     }
 

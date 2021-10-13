@@ -17,7 +17,6 @@ class CreateAdminStationsTable extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('station_id');
-            $table->unsignedBigInteger('schedule_id');
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')
@@ -25,10 +24,6 @@ class CreateAdminStationsTable extends Migration
                 ->onUpdate('cascade');
 
             $table->foreign('station_id')->references('id')->on('station')
-                ->onDelete('cascade')
-                ->onUpdate('cascade');
-
-            $table->foreign('schedule_id')->references('id')->on('schedules')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });
