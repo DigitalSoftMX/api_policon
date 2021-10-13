@@ -38,11 +38,14 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
             'first_surname' => 'required|string',
+            'second_surname' => 'required|string',
+            'birthdate' => request('birthdate') != '' ? 'date_format:Y-m-d' : '',
             'email' => [
                 'required', 'email', Rule::unique((new User)->getTable())
             ],
             'phone' => request('phone') != '' ? ['min:10', Rule::unique((new User)->getTable())] : '',
             'password' => 'required|string|min:6',
+            'address' => request('address') != '' ? 'string' : '',
         ]);
         if ($validator->fails()) {
             return $this->errorResponse($validator->errors(), null);
