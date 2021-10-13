@@ -10,7 +10,7 @@ use App\User;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
-class ContactController extends Controller
+/* class ContactController extends Controller
 {
     // Funcion para obtener los contactos de un usuario
     public function getListContacts()
@@ -101,4 +101,4 @@ class ContactController extends Controller
             'message' => $message
         ]);
     }
-}
+} */

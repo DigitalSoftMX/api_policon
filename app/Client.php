@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Client extends Model
 {
-    protected $fillable = ['user_id', 'current_balance', 'shared_balance', 'points', 'visits', 'image', 'birthdate', 'ids'];
+    protected $fillable = ['user_id', 'current_balance', 'shared_balance', 'points', 'ids', 'active'];
     // Relacion con el usuario
     public function user()
     {
@@ -56,10 +56,5 @@ class Client extends Model
     public function main()
     {
         return $this->belongsToMany(User::class, 'user_client');
-    }
-    // Relacion entre los clientes principales y el admin de ventas
-    public function reference()
-    {
-        return $this->belongsToMany(User::class, 'sale_clients', 'client_id', 'sale_id');
     }
 }

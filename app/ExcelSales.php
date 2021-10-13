@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Lealtad;
+namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Ticket extends Model
+class ExcelSales extends Model
 {
     //
 }

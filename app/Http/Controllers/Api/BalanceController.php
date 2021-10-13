@@ -3,15 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Canje;
-use App\Client;
 use App\Sale;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\SharedBalance;
-use App\User;
-use App\Deposit;
 use App\Empresa;
-use App\Events\MessageDns;
 use App\Exchange;
 use App\History;
 use App\Lealtad\Ticket;
@@ -36,48 +31,42 @@ class BalanceController extends Controller
         }
     }
     // Funcion para obtener la lista de los abonos realizados por el usuario a su cuenta
-    public function getPersonalPayments()
+    /* public function getPersonalPayments()
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if (count($payments = $user->client->deposits->where('status', 4)->where('balance', '>', 0)) > 0) {
-                $deposits = array();
-                foreach ($payments as $payment) {
-                    $data['id'] = $payment->id;
-                    $data['balance'] = $payment->balance;
-                    $data['status'] = $payment->status;
-                    $data['station']['name'] = $payment->station->name;
-                    $data['station']['number_station'] = $payment->station->number_station;
-                    array_push($deposits, $data);
-                }
-                return $this->successResponse('payments', $deposits);
+        if (count($payments = $user->client->deposits->where('status', 4)->where('balance', '>', 0)) > 0) {
+            $deposits = array();
+            foreach ($payments as $payment) {
+                $data['id'] = $payment->id;
+                $data['balance'] = $payment->balance;
+                $data['status'] = $payment->status;
+                $data['station']['name'] = $payment->station->name;
+                $data['station']['number_station'] = $payment->station->number_station;
+                array_push($deposits, $data);
             }
-            return $this->errorResponse('No hay abonos realizados');
+            return $this->successResponse('payments', $deposits);
         }
-        return $this->logout(JWTAuth::getToken());
-    }
+        return $this->errorResponse('No hay abonos realizados');
+    } */
     // Funcion para realizar un abono a la cuenta de un usuario
-    public function addBalance(Request $request)
+    /* public function addBalance(Request $request)
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if ($request->deposit % 100 == 0 && $request->deposit > 0) {
-                // Obteniendo el archivo de imagen de pago
-                if (($file = $request->file('image')) != NULL) {
-                    if ((strpos($file->getClientMimeType(), 'image')) === false) {
-                        return $this->errorResponse('El archivo no es una imagen');
-                    }
-                    $request->merge(['client_id' => $user->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
-                    $deposit = new Deposit();
-                    $deposit->create($request->all());
-                    return $this->successResponse('message', 'Abono realizado correctamente');
+        if ($request->deposit % 100 == 0 && $request->deposit > 0) {
+            // Obteniendo el archivo de imagen de pago
+            if (($file = $request->file('image')) != NULL) {
+                if ((strpos($file->getClientMimeType(), 'image')) === false) {
+                    return $this->errorResponse('El archivo no es una imagen');
                 }
-                return $this->errorResponse('Debe subir su comprobante');
+                $request->merge(['client_id' => $user->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
+                $deposit = new Deposit();
+                $deposit->create($request->all());
+                return $this->successResponse('message', 'Abono realizado correctamente');
             }
-            return $this->errorResponse('La cantidad debe ser multiplo de $100');
+            return $this->errorResponse('Debe subir su comprobante');
         }
-        return $this->logout(JWTAuth::getToken());
-    }
+        return $this->errorResponse('La cantidad debe ser multiplo de $100');
+    } */
     // Funcion para devolver la membresía del cliente y la estacion
-    public function useBalance(Request $request)
+    /* public function useBalance(Request $request)
     {
         if (($user = Auth::user())->verifyRole(5)) {
             if (($payment = $user->client->deposits->find($request->id_payment)) != null) {
@@ -93,9 +82,9 @@ class BalanceController extends Controller
             return $this->errorResponse('No hay abono en la cuenta');
         }
         return $this->logout(JWTAuth::getToken());
-    }
+    } */
     // Funcion para enviar saldo a un contacto del usuario
-    public function sendBalance(Request $request)
+    /* public function sendBalance(Request $request)
     {
         if (($user = Auth::user())->verifyRole(5)) {
             if ($request->balance % 100 == 0 && $request->balance > 0) {
@@ -125,9 +114,9 @@ class BalanceController extends Controller
             return $this->errorResponse('La cantidad debe ser multiplo de $100');
         }
         return $this->logout(JWTAuth::getToken());
-    }
+    } */
     // Funcion que busca los abonos recibidos
-    public function listReceivedPayments()
+    /* public function listReceivedPayments()
     {
         if (($user = Auth::user())->verifyRole(5)) {
             if (count($balances = $user->client->depositReceived->where('status', 4)->where('balance', '>', 0)) > 0) {
@@ -148,9 +137,9 @@ class BalanceController extends Controller
             return $this->errorResponse('No hay abonos realizados');
         }
         return $this->logout(JWTAuth::getToken());
-    }
+    } */
     // Funcion para devolver informacion de un saldo compartido
-    public function useSharedBalance(Request $request)
+    /* public function useSharedBalance(Request $request)
     {
         if (($user = Auth::user())->verifyRole(5)) {
             if (($deposit = $user->client->depositReceived->find($request->id_payment)) != null) {
@@ -167,9 +156,9 @@ class BalanceController extends Controller
             return $this->errorResponse('No hay abono en la cuenta');
         }
         return $this->logout(JWTAuth::getToken());
-    }
+    } */
     // Funcion para realizar un pago autorizado por el cliente
-    public function makePayment(Request $request)
+    /* public function makePayment(Request $request)
     {
         if ($request->authorization == "true") {
             try {
@@ -208,93 +197,64 @@ class BalanceController extends Controller
             }
         }
         return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado', 'Pago con QR');
-    }
+    } */
     // Metoodo para sumar de puntos QR o formulario
     public function addPoints(Request $request)
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if ($request->qr != '') {
-                $request->merge(['code' => substr($request->qr, 0, 15), 'station' => substr($request->qr, 15, 5), 'sale' => substr($request->qr, 20)]);
-            }
-            $validator = Validator::make($request->all(), [
-                'code' => 'required|string|min:15',
-                'station' => 'required|string|min:5',
-                'sale' => 'required|string',
-            ]);
-            if ($validator->fails()) {
-                return  $this->errorResponse($validator->errors());
-            }
-            if (($station = Station::where('number_station', $request->station)->first()) != null) {
-                $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
-                $ip = 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
-                $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                if ($saleQr != null && $saleQr->points == 0) {
-                    $sale = $this->sendDnsMessage($station, $dns, $ip, $saleQr);
-                    if (is_string($sale)) {
-                        return $this->errorResponse($sale);
-                    }
-                    $data = $this->status_L($sale, $request, $station, $user, $saleQr);
-                    if (is_string($data)) {
-                        return $this->errorResponse($data);
-                    }
-                    $saleQr->update($data->all());
-                    return $this->addPointsEucomb($user, $data->points);
-                }
-                if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
-                    $scanedTicket = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                    if ($scanedTicket != null) {
-                        return $this->messageScanedTicket($scanedTicket->client_id, $user->client->id);
-                    }
-                    $scanedTicket = Sale::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                    if ($scanedTicket != null) {
-                        return $this->messageScanedTicket($scanedTicket->client_id, $user->client->id);
-                    }
-                    $scanedTicket = Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->first();
-                    if ($scanedTicket != null) {
-                        return $this->messageScanedTicket($scanedTicket->number_usuario, $user->username);
-                    }
-                    return $this->errorResponse('Esta venta fue registrada anteriormente');
-                }
-                if (count(SalesQr::where([['client_id', $user->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
-                    $sale = $this->sendDnsMessage($station, $dns, $ip);
-                    if (is_string($sale)) {
-                        return $this->errorResponse($sale);
-                    }
-                    // return $sale;
-                    $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                    $start = $dateSale->modify('+2 minute');
-                    $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                    $dateSale->modify('+2 minute');
-                    $end = $dateSale->modify('+24 hours');
-                    if (now() < $start) {
-                        return $this->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
-                    }
-                    if (now() > $end) {
-                        return $this->errorResponse('Han pasado 24 hrs para escanear su QR');
-                    }
-                    $data = $this->status_L($sale, $request, $station, $user);
-                    if (is_string($data)) {
-                        return $this->errorResponse($data);
-                    }
-                    $qr = SalesQr::create($data->all());
-                    $points = $this->addEightyPoints($user->client->id, $request->liters);
-                    if ($points == 0) {
-                        $qr->delete();
-                        $limit = (Empresa::find(1)->double_points) * 80;
-                        return $this->errorResponse("Ha llegado al límite de $limit puntos por día");
-                    } else {
-                        $qr->update(['points' => $points]);
-                    }
-                    return $this->addPointsEucomb($user, $points);
-                }
-                return $this->errorResponse('Solo puedes validar 4 QR\'s por día');
-            }
-            return $this->errorResponse('La estación no existe. Intente con el formulario.');
+        if ($request->qr) {
+            $request->merge(['code' => substr($request->qr, 0, 15), 'station' => substr($request->qr, 15, 5), 'sale' => substr($request->qr, 20)]);
         }
-        return $this->logout(JWTAuth::getToken());
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string|min:15',
+            'station' => 'required|string|min:5',
+            'sale' => 'required|string',
+        ]);
+        if ($validator->fails()) {
+            return  $this->errorResponse($validator->errors());
+        }
+        if (($station = Station::where('number_station', $request->station)->first()) != null) {
+            $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
+            $ip = 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
+            if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists())
+                return $this->errorResponse('Esta venta ya fue registrada anteriormente');
+            if (count(SalesQr::where([['client_id', $this->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
+                $sale = $this->sendDnsMessage($station, $dns, $ip);
+                if (is_string($sale)) {
+                    return $this->errorResponse($sale);
+                }
+                // return $sale;
+                $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                $start = $dateSale->modify('+2 minute');
+                $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                $dateSale->modify('+2 minute');
+                $end = $dateSale->modify('+24 hours');
+                if (now() < $start) {
+                    return $this->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
+                }
+                if (now() > $end) {
+                    return $this->errorResponse('Han pasado 24 hrs para escanear su QR');
+                }
+                $data = $this->status_L($sale, $request, $station, $this->user);
+                if (is_string($data)) {
+                    return $this->errorResponse($data);
+                }
+                $qr = SalesQr::create($data->all());
+                $points = $this->addEightyPoints($this->client->id, $request->liters);
+                if ($points == 0) {
+                    $qr->delete();
+                    $limit = (Empresa::find(1)->double_points) * 80;
+                    return $this->errorResponse("Ha llegado al límite de $limit puntos por día");
+                } else {
+                    $qr->update(['points' => $points]);
+                }
+                return $this->addPointsEucomb($this->user, $points);
+            }
+            return $this->errorResponse('Solo puedes validar 4 QR\'s por día');
+        }
+        return $this->errorResponse('La estación no existe. Intente con el formulario.');
     }
     // Método para realizar canjes
-    public function exchange(Request $request)
+    /* public function exchange(Request $request)
     {
         if (($user = Auth::user())->verifyRole(5)) {
             if (($station = Station::find($request->id)) != null) {
@@ -342,9 +302,9 @@ class BalanceController extends Controller
             return $this->errorResponse('La estación no existe');
         }
         return $this->logout(JWTAuth::getToken());
-    }
+    } */
     // Funcion para enviar una notificacion
-    private function makeNotification($idsDispatcher, $idsClient, $message, $notification)
+    /* private function makeNotification($idsDispatcher, $idsClient, $message, $notification)
     {
         $ids = array("$idsDispatcher");
         if ($idsClient != null) {
@@ -375,7 +335,7 @@ class BalanceController extends Controller
         $response = curl_exec($ch);
         curl_close($ch);
         return $this->successResponse('notification', \json_decode($response));
-    }
+    } */
     // Metodo para consultar la informacion de venta de una estacion
     private function getSaleOfStation($url, $saleQr = null)
     {
@@ -467,15 +427,6 @@ class BalanceController extends Controller
             $newVal = intval($val);
         }
         return $newVal;
-    }
-    // Mensaje de ticket escaneado
-    private function messageScanedTicket($clientId, $saleClientId)
-    {
-        if ($clientId == $saleClientId) {
-            return $this->errorResponse('Ya has escaneado este ticket, verifica tus movimientos');
-        } else {
-            return $this->errorResponse('Esta venta fue registrada por otro usuario');
-        }
     }
     // Metodo para enviar un correo cuando el DNS falle
     private function sendDnsMessage($station, $dns, $ip, $saleQr = null)
