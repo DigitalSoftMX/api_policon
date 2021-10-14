@@ -22,6 +22,8 @@ class CreateStationTable extends Migration
             $table->string('number_station', 10);
             $table->string('image')->nullable();
             $table->integer('winner')->default(0);
+            $table->string('start')->nullable();
+            $table->string('end')->nullable();
             $table->integer('active')->default(1);
             $table->timestamps();
         });

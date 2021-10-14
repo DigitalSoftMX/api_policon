@@ -52,7 +52,7 @@ class AuthController extends Controller
         }
         // Membresia aleatoria no repetible
         while (true) {
-            $membership = 'P' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
+            $membership = 'MO' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
             if (!(User::where('membership', $membership)->exists())) {
                 $request->merge(['membership' => $membership]);
                 break;
