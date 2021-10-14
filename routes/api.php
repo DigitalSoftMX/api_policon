@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,8 +26,10 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 //Rutas para los usuarios tipo cliente
 Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('main', 'Api\ClientController@index');
-    Route::get('balance', 'Api\ClientController@getListStations');
-    Route::get('balance/history', 'Api\ClientController@history');
+    Route::get('dates/{station}', 'Api\ClientController@dates');
+    Route::get('points/{station}', 'Api\ClientController@pointsStation');
+    // Route::get('balance', 'Api\ClientController@getListStations');
+    // Route::get('balance/history', 'Api\ClientController@history');
 });
 // Rutas para los abonos
 Route::group(['middleware' => 'jwtAuth'], function () {
@@ -37,7 +40,7 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('balance/getlistreceived', 'Api\BalanceController@listReceivedPayments');
     Route::get('balance/getlistreceived/use', 'Api\BalanceController@useSharedBalance');
     Route::post('balance/makepayment', 'Api\BalanceController@makePayment'); */
-    Route::post('points', 'Api\BalanceController@addPoints'); //En revisión
+    // Route::post('points', 'Api\BalanceController@addPoints'); //En revisión
     // Route::post('exchange', 'Api\BalanceController@exchange');
 });
 //Rutas para contactos

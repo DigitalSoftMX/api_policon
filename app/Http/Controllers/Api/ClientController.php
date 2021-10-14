@@ -6,12 +6,14 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Station;
 use App\SalesQr;
+use DateTime;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\Validator;
 
 class ClientController extends Controller
 {
-    private $user, $client;
+    private $user, $client, $points;
     public function __construct()
     {
         $this->user = auth()->user();
@@ -19,25 +21,66 @@ class ClientController extends Controller
             $this->logout(JWTAuth::getToken());
         } else {
             $this->client = $this->user->client;
+            $this->points = $this->client->paymentsQrs->where('active', 1)->sortByDesc('created_at');
         }
     }
     // funcion para obtener informacion del usuario hacia la pagina princial
     public function index()
     {
         $data['id'] = $this->user->id;
-        $data['name'] = $this->user->name;
-        $data['first_surname'] = $this->user->first_surname;
-        $data['second_surname'] = $this->user->second_surname;
-        $data['email'] = $this->user->email;
-        $data['client']['membership'] = $this->user->membership;
-        $data['client']['current_balance'] = $this->client->deposits->where('status', 4)->sum('balance');
-        $data['client']['shared_balance'] = $this->client->depositReceived->where('status', 4)->sum('balance');
-        $data['client']['total_shared_balance'] = count($this->client->depositReceived->where('status', 4)->where('balance', '>', 0));
-        $data['client']['points'] = $this->client->points;
-        return $this->successResponse('user', $data, null, null);
+        $data['name'] = "{$this->user->name} {$this->user->first_surname} {$this->user->second_surname}";
+        $data['membership'] = $this->user->membership;
+        $data['stations'] = [];
+        foreach (Station::where('active', 1)->get() as $station) {
+            $pointsPerStation = $this->points->where('station_id', $station->id)->sum('points');
+            if ($pointsPerStation > 0) {
+                array_push($data['stations'], array('id' => $station->id, 'station' => "$station->name", 'points' => $pointsPerStation));
+            }
+        }
+        return $data;
+    }
+    // Historial de puntos por estacion
+    public function dates(Station $station)
+    {
+        if ($station->start) {
+            if ($station->end)
+                return array('start' => $station->start, 'end' => $station->end);
+            $end = new DateTime($station->start);
+            $end->modify('last day of this month');
+            $end = $end->format('Y-m-d');
+            return array('start' => $station->start, 'end' => $end);
+        }
+        $end = new DateTime(date('Y-m') . '-01');
+        $end->modify('last day of this month');
+        $end = $end->format('Y-m-d');
+        return array('start' => date('Y-m') . '-01', 'end' => $end);
+        /* $points = $this->points->where('station_id', $station->id)->sortByDesc('created_at');
+        $dates = $points->map(function ($model) {
+            return $model->created_at->format('Y-m-d');
+        })->toArray();
+        $dates = array_values($dates);
+        $dates = array_unique($dates);
+        return $dates; */
+    }
+    public function pointsStation(Request $request, Station $station)
+    {
+        $validator = Validator::make($request->only('date'), ['date' => 'required|date_format:Y-m-d']);
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors(), null);
+        }
+        $points = [];
+        foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])->whereDate('created_at', $request->date)->orderBy('created_at', 'desc')->get() as $point) {
+            $data['id'] = $point->sale;
+            $data['product'] = $point->gasoline;
+            $data['liters'] = "{$point->liters} litros";
+            $data['hour'] = $point->created_at->format('H:i');
+            $data['points'] = "{$point->points} puntos";
+            array_push($points, $data);
+        }
+        return count($points) > 0 ? $this->successResponse('points', $points) : $this->errorResponse('Aun no tienes tickets registrados');
     }
     // Funcion principal para la ventana de abonos a las estaciones o ver los canjes
-    public function getListStations()
+    /* public function getListStations()
     {
         $stations = array();
         foreach (Station::all() as $station) {
@@ -59,7 +102,7 @@ class ClientController extends Controller
             array_push($exchanges, $dataExchange);
         }
         return $this->successResponse('stations', $stations, 'exchanges', $exchanges);
-    }
+    } */
     // Funcion para devolver el historial de abonos a la cuenta del usuario
     public function history(Request $request)
     {

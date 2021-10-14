@@ -32,11 +32,6 @@ class Client extends Model
     {
         return $this->hasMany(Contact::class, 'transmitter_id', 'id');
     }
-    // Relacion con el tipo de vehiculo
-    public function car()
-    {
-        return $this->hasOne(DataCar::class);
-    }
     // Relacion con los pagos que ha realizado
     public function payments()
     {

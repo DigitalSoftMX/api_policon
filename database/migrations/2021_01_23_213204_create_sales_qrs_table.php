@@ -15,13 +15,14 @@ class CreateSalesQrsTable extends Migration
     {
         Schema::create('sales_qrs', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->unsignedBigInteger('client_id');
+            $table->unsignedBigInteger('station_id');
             $table->bigInteger('sale');
             $table->integer('gasoline');
             $table->double('liters');
             $table->integer('points');
             $table->double('payment');
-            $table->unsignedBigInteger('station_id');
-            $table->unsignedBigInteger('client_id');
+            $table->integer('active')->default(1);
             $table->timestamps();
 
             $table->foreign('station_id')->references('id')->on('station')
