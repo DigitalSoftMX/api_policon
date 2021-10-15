@@ -4356,6 +4356,7 @@ return array(
     'SebastianBergmann\\Type\\VoidType' => $vendorDir . '/sebastian/type/src/VoidType.php',
     'SebastianBergmann\\Version' => $vendorDir . '/sebastian/version/src/Version.php',
     'StationTableSeeder' => $baseDir . '/database/seeds/StationTableSeeder.php',
+    'StatusTableSeeder' => $baseDir . '/database/seeds/StatusTableSeeder.php',
     'Stringable' => $vendorDir . '/symfony/polyfill-php80/Resources/stubs/Stringable.php',
     'Symfony\\Component\\Console\\Application' => $vendorDir . '/symfony/console/Application.php',
     'Symfony\\Component\\Console\\Color' => $vendorDir . '/symfony/console/Color.php',

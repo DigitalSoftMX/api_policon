@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\ExcelSales;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Station;
@@ -32,7 +33,7 @@ class ClientController extends Controller
         $data['membership'] = $this->user->membership;
         $data['stations'] = [];
         foreach (Station::where('active', 1)->get() as $station) {
-            $pointsPerStation = $this->points->where('station_id', $station->id)->sum('points');
+            $pointsPerStation = $this->points->where('station_id', $station->id)->where('status_id', 2)->sum('points');
             if ($pointsPerStation > 0) {
                 array_push($data['stations'], array('id' => $station->id, 'station' => "$station->name", 'points' => $pointsPerStation));
             }
@@ -75,9 +76,60 @@ class ClientController extends Controller
             $data['liters'] = "{$point->liters} litros";
             $data['hour'] = $point->created_at->format('H:i');
             $data['points'] = "{$point->points} puntos";
+            $data['status'] = $point->status->name;
             array_push($points, $data);
         }
         return count($points) > 0 ? $this->successResponse('points', $points) : $this->errorResponse('Aun no tienes tickets registrados');
+    }
+    // Suma de puntos por el cliente
+    public function addPoints(Request $request)
+    {
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'station' => ['required', 'integer', 'station' => 'exists:App\Station,number_station'],
+                'ticket' => 'required|string', 'payment_type' => 'required|string',
+                'payment' => 'required|numeric|min:500|exclude_if:payment,0', 'product' => 'required|string',
+                'liters' => 'required|numeric', 'date' => 'required|date_format:Y-m-d H:i'
+            ]
+        );
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors(), null);
+        }
+        $station = Station::where('number_station', $request->station)->first();
+        $request->merge(
+            [
+                'client_id' => $this->client->id, 'station_id' => $station->id,
+                'sale' => $request->ticket, 'product' => strtoupper($request->product),
+                'created_at' => $request->date
+            ]
+        );
+        if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
+            return $this->errorResponse('El ticket ya ha sido registrado');
+        $qr = SalesQr::create($request->all());
+        if (ExcelSales::where([
+            ['station_id', $station->id], ['ticket', $request->ticket], ['date', $request->date],
+            ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
+            ['payment_type', $request->payment_type]
+        ])->exists()) {
+            $count = SalesQr::where([['client_id', $this->client->id], ['active', 1], ['status_id', 2], ['created_at', 'like', $qr->created_at->format('Y-m-d') . '%']])->count();
+            switch ($request->product) {
+                case str_contains($request->product, 'EXTRA'):
+                    $points = $this->getPoints($request->liters, 1.5, $count);
+                    break;
+                case str_contains($request->product, 'SUPREME'):
+                    $points = $this->getPoints($request->liters, 2, $count);
+                    break;
+                case str_contains($request->product, 'DIESEL'):
+                    $points = $this->getPoints($request->liters, 1, $count);
+                    break;
+            }
+            $qr->update(['points' => $points, 'status_id' => 2]);
+            $this->client->points += $points;
+            $this->client->save();
+            return $this->successResponse('message', 'Se han sumado sus puntos');
+        }
+        return $this->successResponse('message', 'Su ticket ha sido registrado, se notificará en el momento que sea validado');
     }
     // Funcion principal para la ventana de abonos a las estaciones o ver los canjes
     /* public function getListStations()
@@ -219,6 +271,19 @@ class ClientController extends Controller
         }
         return $payments;
     } */
+    // Calcular numero de puntos
+    private function getPoints($liters, $sum, $count)
+    {
+        $val = $liters;
+        $liters = explode(".", $val);
+        if (count($liters) > 1) {
+            $points = $liters[0] . '.' . $liters[1][0];
+            $points = round($points, 0, PHP_ROUND_HALF_DOWN);
+        } else {
+            $points = intval($val);
+        }
+        return $points * ($sum + ($count * 0.25));
+    }
     // Metodo para cerrar sesion
     private function logout($token)
     {

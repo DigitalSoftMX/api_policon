@@ -84,7 +84,7 @@ return [
     'mimes'     => ':attribute debe ser un archivo con formato: :values.',
     'mimetypes' => ':attribute debe ser un archivo con formato: :values.',
     'min'       => [
-        'numeric' => 'El tamaño de :attribute debe ser de al menos :min.',
+        'numeric' => 'El :attribute debe ser de al menos de :min.',
         'file'    => 'El tamaño de :attribute debe ser de al menos :min kilobytes.',
         'string'  => ':attribute debe contener al menos :min caracteres.',
         'array'   => ':attribute debe tener al menos :min elementos.',
@@ -185,6 +185,10 @@ return [
         'first_surname' => 'apellido paterno',
         'code' => 'código',
         'station' => 'estación',
-        'sale' => 'venta'
+        'sale' => 'venta',
+        'payment_type' => 'tipo de pago',
+        'payment' => 'pago',
+        'product' => 'producto',
+        'liters' => 'cantidad',
     ],
 ];
