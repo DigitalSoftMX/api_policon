@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\ExcelSales;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Repositories\Validation;
 use App\Station;
 use App\SalesQr;
 use DateTime;
@@ -14,9 +15,10 @@ use Illuminate\Support\Facades\Validator;
 
 class ClientController extends Controller
 {
-    private $user, $client, $points;
-    public function __construct()
+    private $user, $client, $points, $validate;
+    public function __construct(Validation $validation)
     {
+        $this->validate = $validation;
         $this->user = auth()->user();
         if ($this->user == null || $this->user->roles->first()->id != 5) {
             $this->logout(JWTAuth::getToken());
@@ -71,31 +73,37 @@ class ClientController extends Controller
         }
         $points = [];
         foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])->whereDate('created_at', $request->date)->orderBy('created_at', 'desc')->get() as $point) {
-            $data['id'] = $point->sale;
+            if ($point->status_id != 2)
+                $data['id'] = $point->id;
+            $data['sale'] = $point->sale;
             $data['product'] = $point->gasoline;
             $data['liters'] = "{$point->liters} litros";
             $data['hour'] = $point->created_at->format('H:i');
             $data['points'] = "{$point->points} puntos";
             $data['status'] = $point->status->name;
             array_push($points, $data);
+            $data = [];
         }
         return count($points) > 0 ? $this->successResponse('points', $points) : $this->errorResponse('Aun no tienes tickets registrados');
     }
     // Suma de puntos por el cliente
     public function addPoints(Request $request)
     {
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'station' => ['required', 'integer', 'station' => 'exists:App\Station,number_station'],
-                'ticket' => 'required|string', 'payment_type' => 'required|string',
-                'payment' => 'required|numeric|min:500|exclude_if:payment,0', 'product' => 'required|string',
-                'liters' => 'required|numeric', 'date' => 'required|date_format:Y-m-d H:i'
-            ]
-        );
-        if ($validator->fails()) {
-            return $this->errorResponse($validator->errors(), null);
-        }
+        return $this->registerOrUpdateQr($request);
+    }
+    // Funcion para actulizar la venta por ingreso incorrecto
+    public function updateSale(Request $request, SalesQr $qr)
+    {
+        if ($qr->status_id == 2)
+            return $this->errorResponse('Esta venta no se puede editar');
+        return $this->registerOrUpdateQr($request, $qr);
+    }
+    // Registro y actualizacion de las qr's escaneados
+    private function registerOrUpdateQr(Request $request, SalesQr $qr = null)
+    {
+        $validate = $this->validate->validateSale($request);
+        if (!is_bool($validate))
+            return $validate;
         $station = Station::where('number_station', $request->station)->first();
         $request->merge(
             [
@@ -104,9 +112,13 @@ class ClientController extends Controller
                 'created_at' => $request->date
             ]
         );
-        if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
-            return $this->errorResponse('El ticket ya ha sido registrado');
-        $qr = SalesQr::create($request->all());
+        if ($qr) {
+            $qr->update($request->except(['status_id', 'active']));
+        } else {
+            if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
+                return $this->errorResponse('El ticket ya ha sido registrado');
+            $qr = SalesQr::create($request->all());
+        }
         if (ExcelSales::where([
             ['station_id', $station->id], ['ticket', $request->ticket], ['date', $request->date],
             ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
@@ -156,12 +168,12 @@ class ClientController extends Controller
         return $this->successResponse('stations', $stations, 'exchanges', $exchanges);
     } */
     // Funcion para devolver el historial de abonos a la cuenta del usuario
-    public function history(Request $request)
+    /* public function history(Request $request)
     {
         try {
             $payments = array();
             switch ($request->type) {
-                    /* case 'payment':
+                    case 'payment':
                         if (count($balances = $this->getBalances(new Sale(), $request->start, $request->end, $user, null, null)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->payment;
@@ -177,8 +189,8 @@ class ClientController extends Controller
                             }
                             return $this->successResponse('payments', $payments, null, null);
                         }
-                        break; */
-                    /* case 'balance':
+                        break;
+                    case 'balance':
                         if (count($balances = $this->getBalances(new Deposit(), $request->start, $request->end, $user, 4, null)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->balance;
@@ -190,20 +202,20 @@ class ClientController extends Controller
                             }
                             return $this->successResponse('balances', $payments, null, null);
                         }
-                        break; */
-                    /* case 'share':
+                        break;
+                    case 'share':
                         if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'transmitter_id')) > 0) {
                             $payments = $this->getSharedBalances($balances, 'receiver');
                             return $this->successResponse('balances', $payments, null, null);
                         }
-                        break; */
-                    /* case 'received':
+                        break;
+                    case 'received':
                         if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'receiver_id')) > 0) {
                             $payments = $this->getSharedBalances($balances, 'transmitter');
                             return $this->successResponse('balances', $payments, null, null);
                         }
-                        break; */
-                    /* case 'exchange':
+                        break;
+                    case 'exchange':
                         if (count($balances = $this->getBalances(new Exchange(), $request->start, $request->end, $user, 14, 'exchange')) > 0) {
                             foreach ($balances as $balance) {
                                 $data['points'] = $balance->points;
@@ -216,7 +228,7 @@ class ClientController extends Controller
                             }
                             return $this->successResponse('exchanges', $payments, null, null);
                         }
-                        break; */
+                        break;
                 case 'points':
                     if (count($balances = $this->getBalances(new SalesQr(), $request->start, $request->end)) > 0) {
                         foreach ($balances as $balance) {
@@ -235,9 +247,9 @@ class ClientController extends Controller
         } catch (Exception $e) {
             return $this->errorResponse('Error de consulta por fecha');
         }
-    }
+    } */
     // Funcion para devolver el arreglo de historiales
-    private function getBalances($model, $start, $end, $status = null, $type = null)
+    /* private function getBalances($model, $start, $end, $status = null, $type = null)
     {
         $query = [['client_id', $this->client->id]];
         if ($type)
@@ -256,7 +268,7 @@ class ClientController extends Controller
             $balances = ($start > $end) ? null : $model::where($query)->whereDate('created_at', '>=', $start)->whereDate('created_at', '<=', $end)->get();
         }
         return ($balances != null) ? $balances->sortByDesc('created_at') : null;
-    }
+    } */
     // Obteniendo el historial enviodo o recibido
     /* private function getSharedBalances($balances, $person)
     {

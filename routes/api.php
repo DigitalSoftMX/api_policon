@@ -34,6 +34,7 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 // Rutas para los abonos
 Route::group(['middleware' => 'jwtAuth'], function () {
     Route::post('addpoints', 'Api\ClientController@addPoints');
+    Route::post('updatesale/{qr}', 'Api\ClientController@updateSale');
     /* Route::get('payments', 'Api\BalanceController@getPersonalPayments');
     Route::post('balance/pay', 'Api\BalanceController@addBalance');
     Route::get('balance/use', 'Api\BalanceController@useBalance');
