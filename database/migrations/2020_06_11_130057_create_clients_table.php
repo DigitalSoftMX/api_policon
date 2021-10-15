@@ -21,7 +21,7 @@ class CreateClientsTable extends Migration
             $table->string('address')->nullable();
             $table->double('current_balance')->default(0);
             $table->double('shared_balance')->default(0);
-            $table->integer('points')->default(0);
+            $table->double('points')->default(0);
             $table->string('ids')->nullable();
             $table->integer('winner')->default(0);
             $table->integer('active')->default(1);
