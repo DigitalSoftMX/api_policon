@@ -2,18 +2,26 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\DataCar;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\User;
-use Exception;
-use Illuminate\Support\Facades\Auth;
+use App\Repositories\ResponsesAndLogout;
+use App\Repositories\Validation;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    private $user, $client, $response, $validate;
+    public function __construct(ResponsesAndLogout $response, Validation $validate)
+    {
+        $this->user = auth()->user();
+        $this->response = $response;
+        $this->validate = $validate;
+        if ($this->user and $this->user->roles->first()->id == 5) {
+            $this->client = $this->user->client;
+        } else {
+            $this->response->logout(JWTAuth::getToken());
+        }
+    }
     /**
      * Display a listing of the resource.
      *
@@ -21,7 +29,13 @@ class UserController extends Controller
      */
     public function index()
     {
-        switch (($user = Auth::user())->roles[0]->name) {
+        $data = $this->getDataUser($this->user);
+        $data['birthdate'] = $this->client->birthdate;
+        $data['sex'] = $this->client->sex;
+        $data['email'] = $this->user->email;
+        $data['address'] = $this->client->address;
+        return $this->response->successResponse('user', $data);
+        /* switch (($user = Auth::user())->roles[0]->name) {
             case 'usuario':
                 $data = $this->getDataUser($user);
                 $data['email'] = $user->email;
@@ -30,7 +44,7 @@ class UserController extends Controller
                 return $this->successResponse('user', $this->getDataUser($user));
             default:
                 return $this->logout(JWTAuth::getToken());
-        }
+        } */
     }
 
     /**
@@ -42,29 +56,15 @@ class UserController extends Controller
      */
     public function update(Request $request)
     {
-        switch (($user = Auth::user())->roles[0]->name) {
-            case 'usuario':
-                $validator = Validator::make($request->all(), [
-                    'name' => 'required|string',
-                    'first_surname' => 'required|string',
-                    'email' => [
-                        'required', 'email', Rule::unique((new User)->getTable())->ignore($user->id ?? null)
-                    ],
-                    'password' => request('password') != '' ? 'string|min:6' : '',
-                    'phone' => request('phone') != '' ? ['min:10', Rule::unique((new User)->getTable())->ignore($user->id ?? null)] : '',
-                ]);
-                if ($validator->fails()) {
-                    return $this->errorResponse($validator->errors());
-                }
-                // Registrando la informacion basica del cliente
-                $user->update($request->only('name', 'first_surname', 'second_surname', 'email', 'phone'));
-                // Registrando la contraseña
-                if ($request->password != "") {
-                    $user->update(['password' => bcrypt($request->password)]);
-                    $this->logout(JWTAuth::getToken());
-                    return $this->successResponse('message', 'Datos actualizados correctamente, inicie sesión nuevamente');
-                }
-                break;
+        $validator = $this->validate->validateUser($request, $this->user);
+        if (!is_bool($validator))
+            return $validator;
+        $this->user->update($request->only(['name', 'first_surname', 'second_surname', 'email', 'phone']));
+        if ($request->password)
+            $this->user->update(['password' => bcrypt($request->password)]);
+        $this->client->update($request->only(['birthdate', 'sex', 'address']));
+        return $this->response->successResponse('message', 'Datos actualizados correctamente');
+        /* switch (($user = Auth::user())->roles[0]->name) {
             case 'despachador':
                 $validator = Validator::make($request->all(), [
                     'name' => 'required|string',
@@ -78,8 +78,7 @@ class UserController extends Controller
                 break;
             default:
                 return $this->logout(JWTAuth::getToken());
-        }
-        return $this->successResponse('message', 'Datos actualizados correctamente');
+        }*/
     }
 
     // Funcion para obtener la informacion basica de un usuario
@@ -93,31 +92,5 @@ class UserController extends Controller
             'phone' => $user->phone,
         );
         return $data;
-    }
-    // Metodo para cerrar sesion
-    private function logout($token)
-    {
-        try {
-            JWTAuth::invalidate(JWTAuth::parseToken($token));
-            return $this->successResponse('message', 'Usuario no autorizado');
-        } catch (Exception $e) {
-            return $this->errorResponse('Token invalido');
-        }
-    }
-    // Funcion mensaje correcto
-    private function successResponse($name, $data)
-    {
-        return response()->json([
-            'ok' => true,
-            $name => $data
-        ]);
-    }
-    // Funcion mensaje de error
-    private function errorResponse($message)
-    {
-        return response()->json([
-            'ok' => false,
-            'message' => $message
-        ]);
     }
 }
