@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Client;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Validation\Rule;
+use App\Repositories\ResponsesAndLogout;
+use App\Repositories\Validation;
 use Illuminate\Support\Facades\Validator;
 use App\User;
 use Carbon\Carbon;
@@ -14,6 +15,12 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
+    private $response, $validation;
+    public function __construct(ResponsesAndLogout $response, Validation $validation)
+    {
+        $this->response = $response;
+        $this->validation = $validation;
+    }
     // Metodo para inicar sesion
     public function login(Request $request)
     {
@@ -23,33 +30,21 @@ class AuthController extends Controller
             $user = User::where('email', $request->email)->first();
         }
         if (!$user)
-            return $this->errorResponse('Lo sentimos, el usuario no esta registrado', null);
+            return $this->response->errorResponse('Lo sentimos, el usuario no esta registrado');
         if ($user->roles->first()->id == 4 || $user->roles->first()->id == 5) {
-            $validator = Validator::make($request->only('email'), ['email' => 'email']);
+            $validator = Validator::make($request->only(['email', 'password']), ['email' => 'required|email', 'password' => 'required']);
             return ($validator->fails()) ?
-                $this->errorResponse($validator->errors(), null) :
+                $this->response->errorResponse($validator->errors()) :
                 $this->getToken($request, $user);
         }
-        return $this->errorResponse('Usuario no autorizado', null);
+        return $this->response->errorResponse('Usuario no autorizado');
     }
     // Metodo para registrar a un usuario nuevo
     public function register(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string',
-            'first_surname' => 'required|string',
-            'second_surname' => 'required|string',
-            'birthdate' => request('birthdate') != '' ? 'date_format:Y-m-d' : '',
-            'email' => [
-                'required', 'email', Rule::unique((new User)->getTable())
-            ],
-            'phone' => request('phone') != '' ? ['min:10', Rule::unique((new User)->getTable())] : '',
-            'password' => 'required|string|min:6',
-            'address' => request('address') != '' ? 'string' : '',
-        ]);
-        if ($validator->fails()) {
-            return $this->errorResponse($validator->errors(), null);
-        }
+        $validator = $this->validation->validateUser($request);
+        if (!is_bool($validator))
+            return $validator;
         // Membresia aleatoria no repetible
         while (true) {
             $membership = 'MO' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
@@ -70,36 +65,19 @@ class AuthController extends Controller
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($request->token));
-            return $this->successReponse('message', 'Cierre de sesión correcto');
+            return $this->response->successResponse('message', 'Cierre de sesión correcto');
         } catch (Exception $e) {
-            return $this->errorResponse('Token inválido', null);
+            return $this->response->errorResponse('Token inválido');
         }
     }
     // Metodo para iniciar sesion, delvuelve el token
     private function getToken($request, $user)
     {
         if (!$token = JWTAuth::attempt($request->only('email', 'password')))
-            return $this->errorResponse('Datos incorrectos', null);
+            return $this->response->errorResponse('Datos incorrectos');
         $user->update(['remember_token' => $token]);
         if ($user->roles->first()->id == 5)
             $user->client->update($request->only('ids'));
-        return $this->successReponse('token', $token);
-    }
-    // Funcion mensaje correcto
-    private function successReponse($name, $data)
-    {
-        return response()->json([
-            'ok' => true,
-            $name => $data
-        ]);
-    }
-    // Metodo mensaje de error
-    private function errorResponse($message, $email)
-    {
-        return response()->json([
-            'ok' => false,
-            'message' => $message,
-            'id' => $email
-        ]);
+        return $this->response->successResponse('token', $token);
     }
 }

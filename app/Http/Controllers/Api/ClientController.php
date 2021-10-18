@@ -40,7 +40,7 @@ class ClientController extends Controller
                 array_push($data['stations'], array('id' => $station->id, 'station' => "$station->name", 'points' => $pointsPerStation));
             }
         }
-        return $data;
+        return $this->validate->successResponse('message', $data);
     }
     // Historial de puntos por estacion
     public function dates(Station $station)
@@ -65,6 +65,7 @@ class ClientController extends Controller
         $dates = array_unique($dates);
         return $dates; */
     }
+    // Historial de puntos por estación
     public function pointsStation(Request $request, Station $station)
     {
         $validator = Validator::make($request->only('date'), ['date' => 'required|date_format:Y-m-d']);
@@ -105,13 +106,11 @@ class ClientController extends Controller
         if (!is_bool($validate))
             return $validate;
         $station = Station::where('number_station', $request->station)->first();
-        $request->merge(
-            [
-                'client_id' => $this->client->id, 'station_id' => $station->id,
-                'sale' => $request->ticket, 'product' => strtoupper($request->product),
-                'created_at' => $request->date
-            ]
-        );
+        $request->merge([
+            'client_id' => $this->client->id, 'station_id' => $station->id,
+            'sale' => $request->ticket, 'product' => strtoupper($request->product),
+            'created_at' => $request->date
+        ]);
         if ($qr) {
             $qr->update($request->except(['status_id', 'active']));
         } else {
