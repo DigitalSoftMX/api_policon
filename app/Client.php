@@ -27,11 +27,6 @@ class Client extends Model
     {
         return $this->belongsTo(Deposit::class);
     }
-    // Relacion para los contactos del cliente
-    public function contacts()
-    {
-        return $this->hasMany(Contact::class, 'transmitter_id', 'id');
-    }
     // Relacion con los pagos que ha realizado
     public function payments()
     {
@@ -47,9 +42,9 @@ class Client extends Model
     {
         return $this->hasMany(Exchange::class);
     }
-    // Relacion con los usuarioa a referencia
-    public function main()
+    // Relacion con los puntos de cada estacion
+    public function puntos()
     {
-        return $this->belongsToMany(User::class, 'user_client');
+        return $this->hasMany(Point::class);
     }
 }

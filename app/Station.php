@@ -19,4 +19,9 @@ class Station extends Model
     {
         return $this->hasMany(Exchange::class);
     }
+    // Relacion con las ventas por QR
+    public function qrs()
+    {
+        return $this->hasMany(SalesQr::class);
+    }
 }
