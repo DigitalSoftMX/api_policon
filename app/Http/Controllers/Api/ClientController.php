@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\ExcelSales;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Point;
 use App\Repositories\Validation;
 use App\Station;
 use App\SalesQr;
 use DateTime;
-use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
 
@@ -21,7 +21,7 @@ class ClientController extends Controller
         $this->validate = $validation;
         $this->user = auth()->user();
         if ($this->user == null || $this->user->roles->first()->id != 5) {
-            $this->logout(JWTAuth::getToken());
+            $this->validate->logout(JWTAuth::getToken());
         } else {
             $this->client = $this->user->client;
             $this->points = $this->client->paymentsQrs->where('active', 1)->sortByDesc('created_at');
@@ -36,41 +36,33 @@ class ClientController extends Controller
         $data['stations'] = [];
         foreach (Station::where('active', 1)->get() as $station) {
             $pointsPerStation = $this->points->where('station_id', $station->id)->where('status_id', 2)->sum('points');
-            if ($pointsPerStation > 0) {
+            if ($pointsPerStation > 0)
                 array_push($data['stations'], array('id' => $station->id, 'station' => "$station->name", 'points' => $pointsPerStation));
-            }
         }
-        return $this->validate->successResponse('message', $data);
+        return $this->validate->successResponse('stations', $data);
     }
     // Historial de puntos por estacion
     public function dates(Station $station)
     {
         if ($station->start) {
             if ($station->end)
-                return array('start' => $station->start, 'end' => $station->end);
+                return $this->validate->successResponse('dates', array('start' => $station->start, 'end' => $station->end));
             $end = new DateTime($station->start);
             $end->modify('last day of this month');
             $end = $end->format('Y-m-d');
-            return array('start' => $station->start, 'end' => $end);
+            return $this->validate->successResponse('dates', array('start' => $station->start, 'end' => $end));
         }
         $end = new DateTime(date('Y-m') . '-01');
         $end->modify('last day of this month');
         $end = $end->format('Y-m-d');
-        return array('start' => date('Y-m') . '-01', 'end' => $end);
-        /* $points = $this->points->where('station_id', $station->id)->sortByDesc('created_at');
-        $dates = $points->map(function ($model) {
-            return $model->created_at->format('Y-m-d');
-        })->toArray();
-        $dates = array_values($dates);
-        $dates = array_unique($dates);
-        return $dates; */
+        return $this->validate->successResponse('dates', array('start' => date('Y-m') . '-01', 'end' => $end));
     }
     // Historial de puntos por estación
     public function pointsStation(Request $request, Station $station)
     {
         $validator = Validator::make($request->only('date'), ['date' => 'required|date_format:Y-m-d']);
         if ($validator->fails()) {
-            return $this->errorResponse($validator->errors(), null);
+            return $this->validate->errorResponse($validator->errors());
         }
         $points = [];
         foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])->whereDate('created_at', $request->date)->orderBy('created_at', 'desc')->get() as $point) {
@@ -85,7 +77,7 @@ class ClientController extends Controller
             array_push($points, $data);
             $data = [];
         }
-        return count($points) > 0 ? $this->successResponse('points', $points) : $this->errorResponse('Aun no tienes tickets registrados');
+        return count($points) > 0 ? $this->validate->successResponse('points', $points) : $this->validate->errorResponse('Aun no tienes tickets registrados');
     }
     // Suma de puntos por el cliente
     public function addPoints(Request $request)
@@ -96,7 +88,7 @@ class ClientController extends Controller
     public function updateSale(Request $request, SalesQr $qr)
     {
         if ($qr->status_id == 2)
-            return $this->errorResponse('Esta venta no se puede editar');
+            return $this->validate->errorResponse('Esta venta no se puede editar');
         return $this->registerOrUpdateQr($request, $qr);
     }
     // Registro y actualizacion de las qr's escaneados
@@ -115,7 +107,7 @@ class ClientController extends Controller
             $qr->update($request->except(['status_id', 'active']));
         } else {
             if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
-                return $this->errorResponse('El ticket ya ha sido registrado');
+                return $this->validate->errorResponse('El ticket ya ha sido registrado');
             $qr = SalesQr::create($request->all());
         }
         if (ExcelSales::where([
@@ -123,7 +115,7 @@ class ClientController extends Controller
             ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
             ['payment_type', $request->payment_type]
         ])->exists()) {
-            $count = SalesQr::where([['client_id', $this->client->id], ['active', 1], ['status_id', 2], ['created_at', 'like', $qr->created_at->format('Y-m-d') . '%']])->count();
+            $count = $this->client->paymentsQrs()->where([['active', 1], ['status_id', 2], ['created_at', 'like', $qr->created_at->format('Y-m-d') . '%']])->count();
             switch ($request->product) {
                 case str_contains($request->product, 'EXTRA'):
                     $points = $this->getPoints($request->liters, 1.5, $count);
@@ -138,9 +130,15 @@ class ClientController extends Controller
             $qr->update(['points' => $points, 'status_id' => 2]);
             $this->client->points += $points;
             $this->client->save();
-            return $this->successResponse('message', 'Se han sumado sus puntos');
+            if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
+                $poinstation->points += $points;
+                $poinstation->save();
+            } else {
+                Point::create($request->merge(['points' => $points])->only(['client_id', 'station_id', 'points']));
+            }
+            return $this->validate->successResponse('message', 'Se han sumado sus puntos');
         }
-        return $this->successResponse('message', 'Su ticket ha sido registrado, se notificará en el momento que sea validado');
+        return $this->validate->successResponse('message', 'Su ticket ha sido registrado, se notificará en el momento que sea validado');
     }
     // Funcion principal para la ventana de abonos a las estaciones o ver los canjes
     /* public function getListStations()
@@ -294,37 +292,5 @@ class ClientController extends Controller
             $points = intval($val);
         }
         return $points * ($sum + ($count * 0.25));
-    }
-    // Metodo para cerrar sesion
-    private function logout($token)
-    {
-        try {
-            JWTAuth::invalidate(JWTAuth::parseToken($token));
-            return $this->errorResponse('Token invalido');
-        } catch (Exception $e) {
-            return $this->errorResponse('Token invalido');
-        }
-    }
-    // Funcion mensajes de error
-    private function errorResponse($message)
-    {
-        return response()->json([
-            'ok' => false,
-            'message' => $message
-        ]);
-    }
-    // Funcion mensaje correcto
-    private function successResponse($name, $data, $array = null, $dataArray = null)
-    {
-        return ($array) ?
-            response()->json([
-                'ok' => true,
-                $name => $data,
-                $array => $dataArray
-            ]) :
-            response()->json([
-                'ok' => true,
-                $name => $data,
-            ]);
     }
 }
