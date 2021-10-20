@@ -69,7 +69,7 @@ class ClientController extends Controller
             if ($point->status_id != 2)
                 $data['id'] = $point->id;
             $data['sale'] = $point->sale;
-            $data['product'] = $point->gasoline;
+            $data['product'] = $point->product;
             $data['liters'] = "{$point->liters} litros";
             $data['hour'] = $point->created_at->format('H:i');
             $data['points'] = "{$point->points} puntos";
