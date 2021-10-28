@@ -12,6 +12,7 @@ use App\SalesQr;
 use DateTime;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
+use Intervention\Image\Facades\Image;
 
 class ClientController extends Controller
 {
@@ -94,7 +95,7 @@ class ClientController extends Controller
     // Registro y actualizacion de las qr's escaneados
     private function registerOrUpdateQr(Request $request, SalesQr $qr = null)
     {
-        $validate = $this->validate->validateSale($request);
+        $validate = $this->validate->validateSale($request, $qr);
         if (!is_bool($validate))
             return $validate;
         $station = Station::where('number_station', $request->station)->first();
@@ -109,6 +110,9 @@ class ClientController extends Controller
             if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
                 return $this->validate->errorResponse('El ticket ya ha sido registrado');
             $qr = SalesQr::create($request->all());
+            
+            /* $image = Image::make($request->file('photo'))->save();
+            return $image; */
         }
         if (ExcelSales::where([
             ['station_id', $station->id], ['ticket', $request->ticket], ['date', $request->date],

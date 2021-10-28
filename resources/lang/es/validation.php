@@ -190,5 +190,6 @@ return [
         'payment' => 'pago',
         'product' => 'producto',
         'liters' => 'cantidad',
+        'photo' => 'imagen'
     ],
 ];

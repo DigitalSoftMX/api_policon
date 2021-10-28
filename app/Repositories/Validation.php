@@ -25,13 +25,14 @@ class Validation extends ResponsesAndLogout
             return $this->errorResponse($validator->errors());
         return true;
     }
-    public function validateSale(Request $request)
+    public function validateSale(Request $request, $qr = null)
     {
         $validator = Validator::make($request->all(), [
             'station' => ['required', 'integer', 'station' => 'exists:App\Station,number_station'],
-            'ticket' => 'required|string', 'payment_type' => 'required|string',
-            'payment' => 'required|numeric|min:500|exclude_if:payment,0', 'product' => 'required|string',
-            'liters' => 'required|numeric', 'date' => 'required|date_format:Y-m-d H:i:s'
+            'ticket' => 'required|string', 'product' => 'required|string',
+            'payment' => 'required|numeric', 'date' => 'required|date_format:Y-m-d H:i:s',
+            'liters' => 'required|numeric|min:25|exclude_if:liters,0',
+            // 'photo' => $qr ? '' : 'required|image',
         ]);
         if ($validator->fails())
             return $this->errorResponse($validator->errors());

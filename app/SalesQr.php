@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SalesQr extends Model
 {
-    protected $fillable = ['client_id', 'station_id', 'sale', 'product', 'liters', 'points', 'payment', 'payment_type', 'status_id', 'active', 'created_at'];
+    protected $fillable = ['client_id', 'station_id', 'sale', 'product', 'liters', 'points', 'payment', 'photo', 'status_id', 'active', 'created_at'];
     // Relacion con la estacion
     public function station()
     {

@@ -11,7 +11,7 @@ class DBase7Record extends DBase4Record
      */
     public function getDateTimeObject($columnName): ?\DateTimeInterface
     {
-        $column = $this->getColumn($columnName);
+        $column = $this->table->getColumn($columnName);
         $this->checkType($column, [FieldType::DATE, FieldType::TIMESTAMP]);
 
         $data = $this->get($columnName);
@@ -31,6 +31,14 @@ class DBase7Record extends DBase4Record
      * @deprecated since 1.3 and will be delete in 2.0. Use get()
      */
     public function getInt(string $columnName): int
+    {
+        return $this->get($columnName);
+    }
+    
+    /**
+     * @deprecated since 1.3 and will be delete in 2.0. Use get()
+     */
+    public function getDouble(string $columnName): float
     {
         return $this->get($columnName);
     }
