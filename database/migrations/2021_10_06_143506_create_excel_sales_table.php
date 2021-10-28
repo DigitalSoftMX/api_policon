@@ -21,7 +21,6 @@ class CreateExcelSalesTable extends Migration
             $table->string('product');
             $table->double('liters');
             $table->double('payment');
-            $table->string('payment_type');
             $table->timestamps();
 
             $table->foreign('station_id')->references('id')->on('station')

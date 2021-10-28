@@ -10,9 +10,11 @@ use App\Repositories\Validation;
 use App\Station;
 use App\SalesQr;
 use DateTime;
+use Illuminate\Support\Facades\File;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
 use Intervention\Image\Facades\Image;
+use Illuminate\Support\Str;
 
 class ClientController extends Controller
 {
@@ -62,18 +64,17 @@ class ClientController extends Controller
     public function pointsStation(Request $request, Station $station)
     {
         $validator = Validator::make($request->only('date'), ['date' => 'required|date_format:Y-m-d']);
-        if ($validator->fails()) {
+        if ($validator->fails())
             return $this->validate->errorResponse($validator->errors());
-        }
         $points = [];
         foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])->whereDate('created_at', $request->date)->orderBy('created_at', 'desc')->get() as $point) {
             if ($point->status_id != 2)
                 $data['id'] = $point->id;
-            $data['sale'] = $point->sale;
+            $data['sale'] = (int) $point->sale;
             $data['product'] = $point->product;
             $data['liters'] = "{$point->liters} litros";
             $data['hour'] = $point->created_at->format('H:i');
-            $data['points'] = "{$point->points} puntos";
+            $data['points'] = $point->points;
             $data['status'] = $point->status->name;
             array_push($points, $data);
             $data = [];
@@ -110,15 +111,20 @@ class ClientController extends Controller
             if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
                 return $this->validate->errorResponse('El ticket ya ha sido registrado');
             $qr = SalesQr::create($request->all());
-
-            /* $route = storage_path() . "\app\public\qrs\\{$this->user->id}\\" . $request->file('photo')->getClientOriginalName();
-            Image::make($request->file('photo'))->save($route);
-            return 'ok'; */
+            $name = Str::random(10) . $request->file('photo')->getClientOriginalName();
+            $image = "/storage/qrs/{$this->user->id}/";
+            $path = public_path() . $image;
+            if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0777, true, true);
+            }
+            Image::make($request->file('photo'))->resize(1000, null, function ($constraint) {
+                $constraint->aspectRatio();
+            })->save($path . $name);
+            $qr->update(['photo' => $image . $name]);
         }
         if (ExcelSales::where([
             ['station_id', $station->id], ['ticket', $request->ticket], ['date', $request->date],
             ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
-            ['payment_type', $request->payment_type]
         ])->exists()) {
             $count = $this->client->paymentsQrs()->where([['active', 1], ['status_id', 2], ['created_at', 'like', $qr->created_at->format('Y-m-d') . '%']])->count();
             switch ($request->product) {
