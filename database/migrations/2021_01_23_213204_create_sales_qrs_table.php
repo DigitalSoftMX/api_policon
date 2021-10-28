@@ -22,7 +22,7 @@ class CreateSalesQrsTable extends Migration
             $table->double('liters');
             $table->double('points')->default(0);
             $table->double('payment');
-            $table->string('payment_type');
+            $table->string('photo')->nullable();
             $table->unsignedBigInteger('status_id')->default(1);
             $table->integer('active')->default(1);
             $table->timestamps();
