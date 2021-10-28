@@ -109,11 +109,11 @@ class ClientController extends Controller
         } else {
             if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
                 return $this->validate->errorResponse('El ticket ya ha sido registrado');
-            // $qr = SalesQr::create($request->all());
+            $qr = SalesQr::create($request->all());
 
-            $route = storage_path() . "\app\public\qrs\\{$this->user->id}/" . $request->file('photo')->getClientOriginalName();
-            $image = Image::make($request->file('photo'))->save($route);
-            return $image;
+            /* $route = storage_path() . "\app\public\qrs\\{$this->user->id}\\" . $request->file('photo')->getClientOriginalName();
+            Image::make($request->file('photo'))->save($route);
+            return 'ok'; */
         }
         if (ExcelSales::where([
             ['station_id', $station->id], ['ticket', $request->ticket], ['date', $request->date],

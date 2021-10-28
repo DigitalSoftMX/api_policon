@@ -32,7 +32,7 @@ class Validation extends ResponsesAndLogout
             'ticket' => 'required|string', 'product' => 'required|string',
             'payment' => 'required|numeric', 'date' => 'required|date_format:Y-m-d H:i:s',
             'liters' => 'required|numeric|min:25|exclude_if:liters,0',
-            'photo' => $qr ? '' : 'required|image',
+            // 'photo' => $qr ? '' : 'required|image',
         ]);
         if ($validator->fails())
             return $this->errorResponse($validator->errors());
