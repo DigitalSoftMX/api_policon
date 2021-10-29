@@ -129,6 +129,7 @@ class ClientController extends Controller
             ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
         ])->exists()) {
             $count = $this->client->paymentsQrs()->where([['active', 1], ['status_id', 2], ['created_at', 'like', $qr->created_at->format('Y-m-d') . '%']])->count();
+            $continue = true;
             switch ($request->product) {
                 case str_contains($request->product, 'EXTRA'):
                     $points = $this->getPoints($request->liters, 1.5, $count);
@@ -136,20 +137,23 @@ class ClientController extends Controller
                 case str_contains($request->product, 'SUPREME'):
                     $points = $this->getPoints($request->liters, 2, $count);
                     break;
-                case str_contains($request->product, 'DIESEL'):
-                    $points = $this->getPoints($request->liters, 1, $count);
+                default:
+                    $continue = false;
                     break;
             }
-            $qr->update(['points' => $points, 'status_id' => 2]);
-            $this->client->points += $points;
-            $this->client->save();
-            if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
-                $poinstation->points += $points;
-                $poinstation->save();
-            } else {
-                Point::create($request->merge(['points' => $points])->only(['client_id', 'station_id', 'points']));
+            if ($continue) {
+                $qr->update(['points' => $points, 'status_id' => 2]);
+                $this->client->points += $points;
+                $this->client->save();
+                if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
+                    $poinstation->points += $points;
+                    $poinstation->save();
+                } else {
+                    Point::create($request->merge(['points' => $points])->only(['client_id', 'station_id', 'points']));
+                }
+                return $this->validate->successResponse('message', 'Se han sumado sus puntos');
             }
-            return $this->validate->successResponse('message', 'Se han sumado sus puntos');
+            return $this->validate->errorResponse('El producto que ingresó no participa');
         }
         return $this->validate->successResponse('message', 'Su ticket ha sido registrado, se notificará en el momento que sea validado');
     }
