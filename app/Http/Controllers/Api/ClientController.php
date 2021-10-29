@@ -99,6 +99,8 @@ class ClientController extends Controller
         $validate = $this->validate->validateSale($request, $qr);
         if (!is_bool($validate))
             return $validate;
+        if (strtoupper($request->product) == 'DIESEL')
+            return $this->validate->errorResponse('El producto Diésel no participa');
         $station = Station::where('number_station', $request->station)->first();
         $request->merge([
             'client_id' => $this->client->id, 'station_id' => $station->id,
