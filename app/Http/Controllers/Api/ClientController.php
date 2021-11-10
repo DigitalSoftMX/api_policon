@@ -70,7 +70,7 @@ class ClientController extends Controller
         foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])->whereDate('created_at', $request->date)->orderBy('created_at', 'desc')->get() as $point) {
             if ($point->status_id != 2)
                 $data['id'] = $point->id;
-            $data['sale'] = (int) $point->sale;
+            $data['sale'] = $point->sale;
             $data['product'] = $point->product;
             $data['liters'] = "{$point->liters} litros";
             $data['hour'] = $point->created_at->format('H:i');
