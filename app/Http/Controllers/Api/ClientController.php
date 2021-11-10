@@ -73,7 +73,7 @@ class ClientController extends Controller
             $data['sale'] = $point->sale;
             $data['product'] = $point->product;
             $data['liters'] = "{$point->liters} litros";
-            $data['hour'] = $point->created_at->format('H:i');
+            $data['hour'] = $point->created_at->format('H:i:s');
             $data['points'] = $point->points;
             $data['status'] = $point->status->name;
             array_push($points, $data);
