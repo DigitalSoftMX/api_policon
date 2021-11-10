@@ -39,7 +39,7 @@ class ClientController extends Controller
         $data['stations'] = [];
         foreach (Station::where('active', 1)->get() as $station) {
             $pointsPerStation = $this->points->where('station_id', $station->id)->sum('points');
-            if ($pointsPerStation > 0)
+            // if ($pointsPerStation > 0)
                 array_push($data['stations'], array('id' => $station->id, 'station' => "$station->name", 'points' => $pointsPerStation));
         }
         return $this->validate->successResponse('stations', $data);
