@@ -40,7 +40,7 @@ class ClientController extends Controller
         foreach (Station::where('active', 1)->get() as $station) {
             $pointsPerStation = $this->points->where('station_id', $station->id)->sum('points');
             // if ($pointsPerStation > 0)
-                array_push($data['stations'], array('id' => $station->id, 'station' => "$station->name", 'points' => $pointsPerStation));
+            array_push($data['stations'], array('id' => $station->id, 'station' => "$station->name", 'points' => $pointsPerStation));
         }
         return $this->validate->successResponse('stations', $data);
     }
@@ -70,12 +70,14 @@ class ClientController extends Controller
         foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])->whereDate('created_at', $request->date)->orderBy('created_at', 'desc')->get() as $point) {
             if ($point->status_id != 2)
                 $data['id'] = $point->id;
+            $data['station'] = $point->station->number_station;
             $data['sale'] = $point->sale;
             $data['product'] = $point->product;
             $data['liters'] = "{$point->liters} litros";
             $data['hour'] = $point->created_at->format('H:i:s');
             $data['points'] = $point->points;
             $data['status'] = $point->status->name;
+            $data['total'] = $point->payment;
             array_push($points, $data);
             $data = [];
         }
