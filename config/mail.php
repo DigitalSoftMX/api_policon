@@ -56,8 +56,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'eucomb@lealtaddigitalsoft.mx'),
-        'name' => env('MAIL_FROM_NAME', 'Eucomb'),
+        'address' => env('MAIL_FROM_ADDRESS', 'mercadotecnia@policon.mx'),
+        'name' => env('MAIL_FROM_NAME', 'Mobil'),
     ],
 
     /*
