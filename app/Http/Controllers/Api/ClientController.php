@@ -46,20 +46,24 @@ class ClientController extends Controller
         return $this->validate->successResponse('stations', $data);
     }
     // Historial de puntos por estacion
-    public function dates(Station $station)
+    public function dates()
     {
-        if ($station->start) {
-            if ($station->end)
-                return $this->validate->successResponse('dates', array('start' => $station->start, 'end' => $station->end));
-            $end = new DateTime($station->start);
+        $period = Period::all()->last();
+        if (!$period->finish) {
+            if ($period->date_start) {
+                if ($period->date_end)
+                    return $this->validate->successResponse('dates', array('start' => $period->date_start, 'end' => $period->date_end));
+                $end = new DateTime($period->date_start);
+                $end->modify('last day of this month');
+                $end = $end->format('Y-m-d');
+                return $this->validate->successResponse('dates', array('start' => $period->date_start, 'end' => $end));
+            }
+            $end = new DateTime(date('Y-m') . '-01');
             $end->modify('last day of this month');
             $end = $end->format('Y-m-d');
-            return $this->validate->successResponse('dates', array('start' => $station->start, 'end' => $end));
+            return $this->validate->successResponse('dates', array('start' => date('Y-m') . '-01', 'end' => $end));
         }
-        $end = new DateTime(date('Y-m') . '-01');
-        $end->modify('last day of this month');
-        $end = $end->format('Y-m-d');
-        return $this->validate->successResponse('dates', array('start' => date('Y-m') . '-01', 'end' => $end));
+        return $this->validate->errorResponse('"El periodo de promoción ha finalizado, pronto daremos a conocer a nuestros ganadores"');
     }
     // Historial de puntos por estación
     public function pointsStation(Request $request, Station $station)
