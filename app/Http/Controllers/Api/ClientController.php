@@ -104,6 +104,13 @@ class ClientController extends Controller
             return $this->validate->errorResponse('Esta venta no se puede editar');
         return $this->registerOrUpdateQr($request, $qr);
     }
+    // Términos y condiciones
+    public function termsAndConditions()
+    {
+        return ($period = Period::all()->last()) ?
+            $this->validate->successResponse('message', $period->terms) :
+            $this->validate->errorResponse('Aun no hay periodos de promoción activos');
+    }
     // Registro y actualizacion de las qr's escaneados
     private function registerOrUpdateQr(Request $request, SalesQr $qr = null)
     {
