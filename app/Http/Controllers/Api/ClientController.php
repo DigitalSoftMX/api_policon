@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\ExcelSales;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Period;
 use App\Point;
 use App\Repositories\Validation;
 use App\Station;
@@ -67,9 +68,13 @@ class ClientController extends Controller
         if ($validator->fails())
             return $this->validate->errorResponse($validator->errors());
         $points = [];
-        foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])->whereDate('created_at', $request->date)->orderBy('created_at', 'desc')->get() as $point) {
-            if ($point->status_id != 2)
+        foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])
+            ->whereDate('created_at', $request->date)->with(['station', 'status'])
+            ->orderBy('created_at', 'desc')->get() as $point) {
+            if ($point->status_id != 2) {
                 $data['id'] = $point->id;
+                $data['photo'] = asset("{$point->photo}");
+            }
             $data['station'] = $point->station->number_station;
             $data['sale'] = $point->sale;
             $data['product'] = $point->product;
@@ -99,28 +104,30 @@ class ClientController extends Controller
     private function registerOrUpdateQr(Request $request, SalesQr $qr = null)
     {
         $validate = $this->validate->validateSale($request, $qr);
-        if (!is_bool($validate))
-            return $validate;
-        if (strtoupper($request->product) == 'DIESEL')
-            return $this->validate->errorResponse('El producto Diésel no participa');
+        if (!is_bool($validate)) return $validate;
+        $period = Period::all()->last();
+        if (!$period or $period->finish) {
+            return $this->validate->errorResponse('Los tickets solo se pueden escanear cuando haya iniciado una promoción');
+        } else {
+            if ($request->date < $period->date_start or $request->date > $period->date_end)
+                return $this->validate->errorResponse('El ticket no puede ser sumado ya que no pertenece al periodo actual');
+        }
         $station = Station::where('number_station', $request->station)->first();
         $request->merge([
-            'client_id' => $this->client->id, 'station_id' => $station->id,
-            'sale' => $request->ticket, 'product' => strtoupper($request->product),
-            'created_at' => $request->date
+            'client_id' => $this->client->id, 'station_id' => $station->id, 'sale' => $request->ticket,
+            'product' => strtoupper($request->product), 'created_at' => $request->date
         ]);
         if ($qr) {
             $qr->update($request->except(['status_id', 'active']));
         } else {
             if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
-                return $this->validate->errorResponse('El ticket ya ha sido registrado');
+                return $this->validate->errorResponse('Este ticket ya fue registrado con anterioridad');
             $qr = SalesQr::create($request->all());
             $name = Str::random(10) . $request->file('photo')->getClientOriginalName();
             $image = "/storage/qrs/{$this->user->id}/";
             $path = public_path() . $image;
-            if (!File::isDirectory($path)) {
+            if (!File::isDirectory($path))
                 File::makeDirectory($path, 0777, true, true);
-            }
             Image::make($request->file('photo'))->resize(1000, null, function ($constraint) {
                 $constraint->aspectRatio();
             })->save($path . $name);
@@ -130,186 +137,20 @@ class ClientController extends Controller
             ['station_id', $station->id], ['ticket', $request->ticket], ['date', $request->date],
             ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
         ])->exists()) {
-            $count = $this->client->paymentsQrs()->where([['active', 1], ['status_id', 2], ['created_at', 'like', $qr->created_at->format('Y-m-d') . '%']])->count();
-            $continue = true;
-            switch ($request->product) {
-                case str_contains($request->product, 'EXTRA'):
-                    $points = $this->getPoints($request->liters, 1.5, $count);
-                    break;
-                case str_contains($request->product, 'SUPREME'):
-                    $points = $this->getPoints($request->liters, 2, $count);
-                    break;
-                default:
-                    $continue = false;
-                    break;
+            $qr->update(['points' => 10, 'status_id' => 2]);
+            if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
+                $poinstation->points += 10;
+                $poinstation->save();
+            } else {
+                Point::create($request->merge(['points' => 10])->only(['client_id', 'station_id', 'points']));
             }
-            if ($continue) {
-                $qr->update(['points' => $points, 'status_id' => 2]);
-                $this->client->points += $points;
-                $this->client->save();
-                if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
-                    $poinstation->points += $points;
-                    $poinstation->save();
-                } else {
-                    Point::create($request->merge(['points' => $points])->only(['client_id', 'station_id', 'points']));
-                }
-                return $this->validate->successResponse('message', 'Se han sumado sus puntos');
+            return $this->validate->successResponse('message', 'Se han sumado sus puntos');
+        } else {
+            if (ExcelSales::where([['ticket', $request->ticket], ['station_id', $station->id]])->exists()) {
+                $qr->update(['status_id' => 4]);
+                return $this->validate->errorResponse('Su ticket ha sido registrado, verifique los datos para sumar sus puntos correctamente');
             }
-            return $this->validate->errorResponse('El producto que ingresó no participa');
         }
         return $this->validate->successResponse('message', 'Su ticket ha sido registrado, se notificará en el momento que sea validado');
-    }
-    // Funcion principal para la ventana de abonos a las estaciones o ver los canjes
-    /* public function getListStations()
-    {
-        $stations = array();
-        foreach (Station::all() as $station) {
-            $dataStation['id'] = $station->id;
-            $dataStation['name'] = $station->abrev . ' - ' . $station->name;
-            $dataStation['number_station'] = $station->number_station;
-            $dataStation['address'] = $station->address;
-            $dataStation['email'] = $station->email;
-            $dataStation['phone'] = $station->phone;
-            $dataStation['image'] = asset($station->image);
-            array_push($stations, $dataStation);
-        }
-        $exchanges = array();
-        foreach ($this->client->exchanges->where('status', '!=', 14) as $exchange) {
-            $dataExchange['station'] = $exchange->station->name;
-            $dataExchange['invoice'] = $exchange->exchange;
-            $dataExchange['status'] = $exchange->estado->name;
-            $dataExchange['date'] = $exchange->created_at->format('Y/m/d');
-            array_push($exchanges, $dataExchange);
-        }
-        return $this->successResponse('stations', $stations, 'exchanges', $exchanges);
-    } */
-    // Funcion para devolver el historial de abonos a la cuenta del usuario
-    /* public function history(Request $request)
-    {
-        try {
-            $payments = array();
-            switch ($request->type) {
-                    case 'payment':
-                        if (count($balances = $this->getBalances(new Sale(), $request->start, $request->end, $user, null, null)) > 0) {
-                            foreach ($balances as $balance) {
-                                $data['balance'] = $balance->payment;
-                                $data['station'] = $balance->station->name;
-                                $data['liters'] = $balance->liters;
-                                $data['date'] = $balance->created_at->format('Y/m/d');
-                                $data['hour'] = $balance->created_at->format('H:i:s');
-                                $data['gasoline'] = $balance->gasoline->name;
-                                $data['no_island'] = $balance->no_island;
-                                $data['no_bomb'] = $balance->no_bomb;
-                                $data['sale'] = $balance->sale;
-                                array_push($payments, $data);
-                            }
-                            return $this->successResponse('payments', $payments, null, null);
-                        }
-                        break;
-                    case 'balance':
-                        if (count($balances = $this->getBalances(new Deposit(), $request->start, $request->end, $user, 4, null)) > 0) {
-                            foreach ($balances as $balance) {
-                                $data['balance'] = $balance->balance;
-                                $data['station'] = $balance->station->name;
-                                $data['status'] = $balance->deposit->name;
-                                $data['date'] = $balance->created_at->format('Y/m/d');
-                                $data['hour'] = $balance->created_at->format('H:i:s');
-                                array_push($payments, $data);
-                            }
-                            return $this->successResponse('balances', $payments, null, null);
-                        }
-                        break;
-                    case 'share':
-                        if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'transmitter_id')) > 0) {
-                            $payments = $this->getSharedBalances($balances, 'receiver');
-                            return $this->successResponse('balances', $payments, null, null);
-                        }
-                        break;
-                    case 'received':
-                        if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'receiver_id')) > 0) {
-                            $payments = $this->getSharedBalances($balances, 'transmitter');
-                            return $this->successResponse('balances', $payments, null, null);
-                        }
-                        break;
-                    case 'exchange':
-                        if (count($balances = $this->getBalances(new Exchange(), $request->start, $request->end, $user, 14, 'exchange')) > 0) {
-                            foreach ($balances as $balance) {
-                                $data['points'] = $balance->points;
-                                $data['station'] = $balance->station->name;
-                                $data['invoice'] = $balance->exchange;
-                                $data['status'] = $balance->estado->name;
-                                $data['status_id'] = $balance->status;
-                                $data['date'] = $balance->created_at ? $balance->created_at->format('Y/m/d') : '';
-                                array_push($payments, $data);
-                            }
-                            return $this->successResponse('exchanges', $payments, null, null);
-                        }
-                        break;
-                case 'points':
-                    if (count($balances = $this->getBalances(new SalesQr(), $request->start, $request->end)) > 0) {
-                        foreach ($balances as $balance) {
-                            $data['points'] = $balance->points;
-                            $data['station'] = $balance->station->name;
-                            $data['status'] = 'Puntos sumados';
-                            $data['sale'] = $balance->sale;
-                            $data['date'] = $balance->created_at->format('Y/m/d');
-                            array_push($payments, $data);
-                        }
-                        return $this->successResponse('points', $payments);
-                    }
-                    break;
-            }
-            return $this->errorResponse('Sin movimientos en la cuenta');
-        } catch (Exception $e) {
-            return $this->errorResponse('Error de consulta por fecha');
-        }
-    } */
-    // Funcion para devolver el arreglo de historiales
-    /* private function getBalances($model, $start, $end, $status = null, $type = null)
-    {
-        $query = [['client_id', $this->client->id]];
-        if ($type)
-            $query = [[$type, $this->client->client->id]];
-        if ($status)
-            $query[1] = ['status', '!=', $status];
-        if ($type == 'exchange')
-            $query = [['client_id', $this->client->client->id]];
-        if ($start == "" && $end == "") {
-            $balances = $model::where($query)->get();
-        } elseif ($start == "") {
-            $balances = $model::where($query)->whereDate('created_at', '<=', $end)->get();
-        } elseif ($end == "") {
-            $balances = $model::where($query)->whereDate('created_at', '>=', $start)->get();
-        } else {
-            $balances = ($start > $end) ? null : $model::where($query)->whereDate('created_at', '>=', $start)->whereDate('created_at', '<=', $end)->get();
-        }
-        return ($balances != null) ? $balances->sortByDesc('created_at') : null;
-    } */
-    // Obteniendo el historial enviodo o recibido
-    /* private function getSharedBalances($balances, $person)
-    {
-        $payments = array();
-        foreach ($balances as $balance) {
-            $payment['station'] = $balance->station->name;
-            $payment['balance'] = $balance->balance;
-            $payment['membership'] = $balance->$person->user->username;
-            $payment['name'] = $balance->$person->user->name . ' ' . $balance->$person->user->first_surname . ' ' . $balance->$person->user->second_surname;
-            $payment['date'] = $balance->created_at->format('Y/m/d');
-            array_push($payments, $payment);
-        }
-        return $payments;
-    } */
-    // Calcular numero de puntos
-    private function getPoints($liters, $sum, $count)
-    {
-        $val = $liters;
-        $liters = explode(".", $val);
-        if (count($liters) > 1) {
-            $points = $liters[0] . '.' . $liters[1][0];
-            $points = round($points, 0, PHP_ROUND_HALF_DOWN);
-        } else {
-            $points = intval($val);
-        }
-        return $points * ($sum + ($count * 0.25));
     }
 }

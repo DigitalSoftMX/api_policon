@@ -74,7 +74,7 @@ class AuthController extends Controller
     private function getToken($request, $user)
     {
         if (!$token = JWTAuth::attempt($request->only('email', 'password')))
-            return $this->response->errorResponse('Datos incorrectos');
+            return $this->response->errorResponse('Verifique que su contraseña e email sean correctos');
         $user->update(['remember_token' => $token]);
         if ($user->roles->first()->id == 5)
             $user->client->update($request->only('ids'));
