@@ -15,7 +15,7 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 //Rutas para los usuarios tipo cliente
 Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('main', 'Api\ClientController@index');
-    Route::get('dates/{station}', 'Api\ClientController@dates');
+    Route::get('dates', 'Api\ClientController@dates');
     Route::get('points/{station}', 'Api\ClientController@pointsStation');
 });
 // Rutas para los abonos
