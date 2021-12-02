@@ -15,5 +15,6 @@ class StatusTableSeeder extends Seeder
         Status::create(['name' => 'Pendiente']);
         Status::create(['name' => 'Sumado']);
         Status::create(['name' => 'No válido']);
+        Status::create(['name' => 'Verificar']);
     }
 }
