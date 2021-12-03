@@ -10,7 +10,6 @@ use App\Point;
 use App\Repositories\Validation;
 use App\Station;
 use App\SalesQr;
-use DateTime;
 use Illuminate\Support\Facades\File;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
@@ -19,29 +18,30 @@ use Illuminate\Support\Str;
 
 class ClientController extends Controller
 {
-    private $user, $client, $points, $validate;
+    private $user, $client, $validate;
     public function __construct(Validation $validation)
     {
         $this->validate = $validation;
         $this->user = auth()->user();
-        if ($this->user == null || $this->user->roles->first()->id != 5) {
+        if (!$this->user || $this->user->roles->first()->id != 5) {
             $this->validate->logout(JWTAuth::getToken());
         } else {
             $this->client = $this->user->client;
-            $this->points = $this->client->paymentsQrs->where('active', 1)->sortByDesc('created_at');
         }
     }
     // funcion para obtener informacion del usuario hacia la pagina princial
     public function index()
     {
-        $data['id'] = $this->user->id;
+        $data['id'] = $this->client->id;
         $data['name'] = "{$this->user->name} {$this->user->first_surname} {$this->user->second_surname}";
         $data['membership'] = $this->user->membership;
         $data['stations'] = [];
         foreach (Station::where('active', 1)->get() as $station) {
-            $pointsPerStation = $this->points->where('station_id', $station->id)->sum('points');
-            // if ($pointsPerStation > 0)
-            array_push($data['stations'], array('id' => $station->id, 'station' => "$station->name", 'points' => $pointsPerStation));
+            $pointsPerStation = $this->client->puntos->where('station_id', $station->id)->sum('points');
+            array_push(
+                $data['stations'],
+                ['id' => $station->id, 'station' => "{$station->name}", 'points' => $pointsPerStation]
+            );
         }
         return $this->validate->successResponse('stations', $data);
     }
@@ -49,37 +49,31 @@ class ClientController extends Controller
     public function dates()
     {
         $period = Period::all()->last();
-        if (!$period->finish) {
-            if ($period->date_start) {
-                if ($period->date_end)
-                    return $this->validate->successResponse('dates', array('start' => $period->date_start, 'end' => $period->date_end));
-                $end = new DateTime($period->date_start);
-                $end->modify('last day of this month');
-                $end = $end->format('Y-m-d');
-                return $this->validate->successResponse('dates', array('start' => $period->date_start, 'end' => $end));
-            }
-            $end = new DateTime(date('Y-m') . '-01');
-            $end->modify('last day of this month');
-            $end = $end->format('Y-m-d');
-            return $this->validate->successResponse('dates', array('start' => date('Y-m') . '-01', 'end' => $end));
+        if ($period and !$period->finish) {
+            return $this->validate->successResponse(
+                'dates',
+                ['start' => $period->date_start, 'end' => $period->date_end]
+            );
         }
-        return $this->validate->errorResponse('"El periodo de promoción ha finalizado, pronto daremos a conocer a nuestros ganadores"');
+        return $this->validate->errorResponse(
+            $period ? '"El periodo de promoción ha finalizado, pronto daremos a conocer a nuestros ganadores"' :
+                '"Aún no ha iniciado un periodo de promoción."'
+        );
     }
     // Historial de puntos por estación
     public function pointsStation(Request $request, Station $station)
     {
         $validator = Validator::make($request->only('date'), ['date' => 'required|date_format:Y-m-d']);
-        if ($validator->fails())
-            return $this->validate->errorResponse($validator->errors());
+        if ($validator->fails()) return $this->validate->errorResponse($validator->errors());
         $points = [];
-        foreach (SalesQr::where([['client_id', $this->client->id], ['station_id', $station->id], ['active', 1]])
-            ->whereDate('created_at', $request->date)->with(['station', 'status'])
-            ->orderBy('created_at', 'desc')->get() as $point) {
+        foreach ($this->client->paymentsQrs()->whereDate('created_at', $request->date)
+            ->where('station_id', $station->id)->with('status')->orderBy('created_at', 'desc')
+            ->get() as $point) {
             if ($point->status_id != 2) {
                 $data['id'] = $point->id;
                 $data['photo'] = asset("{$point->photo}");
             }
-            $data['station'] = $point->station->number_station;
+            $data['station'] = $station->number_station;
             $data['sale'] = $point->sale;
             $data['product'] = $point->product;
             $data['liters'] = "{$point->liters} litros";
@@ -100,9 +94,8 @@ class ClientController extends Controller
     // Funcion para actulizar la venta por ingreso incorrecto
     public function updateSale(Request $request, SalesQr $qr)
     {
-        if ($qr->status_id == 2)
-            return $this->validate->errorResponse('Esta venta no se puede editar');
-        return $this->registerOrUpdateQr($request, $qr);
+        return $qr->status_id != 2 ? $this->registerOrUpdateQr($request, $qr) :
+            $this->validate->errorResponse('Esta venta no se puede editar');
     }
     // Términos y condiciones
     public function termsAndConditions()
@@ -148,6 +141,7 @@ class ClientController extends Controller
             ['station_id', $station->id], ['ticket', $request->ticket], ['date', $request->date],
             ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
         ])->exists()) {
+            // Posible cambio en la suma de puntos
             $qr->update(['points' => 10, 'status_id' => 2]);
             if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
                 $poinstation->points += 10;
