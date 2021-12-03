@@ -29,22 +29,16 @@ class UserController extends Controller
      */
     public function index()
     {
-        $data = $this->getDataUser($this->user);
+        $data['id'] = $this->user->id;
+        $data['name'] = $this->user->name;
+        $data['first_surname'] = $this->user->first_surname;
+        $data['second_surname'] = $this->user->second_surname;
+        $data['phone'] = $this->user->phone;
         $data['birthdate'] = $this->client->birthdate;
         $data['sex'] = $this->client->sex;
         $data['email'] = $this->user->email;
         $data['address'] = $this->client->address;
         return $this->response->successResponse('user', $data);
-        /* switch (($user = Auth::user())->roles[0]->name) {
-            case 'usuario':
-                $data = $this->getDataUser($user);
-                $data['email'] = $user->email;
-                return $this->successResponse('user', $data);
-            case 'despachador':
-                return $this->successResponse('user', $this->getDataUser($user));
-            default:
-                return $this->logout(JWTAuth::getToken());
-        } */
     }
 
     /**
@@ -64,33 +58,5 @@ class UserController extends Controller
             $this->user->update(['password' => bcrypt($request->password)]);
         $this->client->update($request->only(['birthdate', 'sex', 'address']));
         return $this->response->successResponse('message', 'Datos actualizados correctamente');
-        /* switch (($user = Auth::user())->roles[0]->name) {
-            case 'despachador':
-                $validator = Validator::make($request->all(), [
-                    'name' => 'required|string',
-                    'first_surname' => 'required|string',
-                    'phone' => request('phone') != '' ? ['min:10', Rule::unique((new User)->getTable())->ignore($user->id ?? null)] : '',
-                ]);
-                if ($validator->fails()) {
-                    return $this->errorResponse($validator->errors());
-                }
-                $user->update($request->only('name', 'first_surname', 'second_surname', 'phone'));
-                break;
-            default:
-                return $this->logout(JWTAuth::getToken());
-        }*/
-    }
-
-    // Funcion para obtener la informacion basica de un usuario
-    private function getDataUser($user)
-    {
-        $data = array(
-            'id' => $user->id,
-            'name' => $user->name,
-            'first_surname' => $user->first_surname,
-            'second_surname' => $user->second_surname,
-            'phone' => $user->phone,
-        );
-        return $data;
     }
 }

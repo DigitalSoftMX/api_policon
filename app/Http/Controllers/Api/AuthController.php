@@ -10,7 +10,6 @@ use App\Repositories\Validation;
 use Illuminate\Support\Facades\Validator;
 use App\User;
 use Carbon\Carbon;
-use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -24,14 +23,14 @@ class AuthController extends Controller
     // Metodo para inicar sesion
     public function login(Request $request)
     {
-        if (($user = User::where('membership', $request->email)->first()) != null) {
+        if ($user = User::where('membership', $request->email)->first()) {
             $request->merge(['email' => $user->email]);
         } else {
             $user = User::where('email', $request->email)->first();
         }
         if (!$user)
             return $this->response->errorResponse('Lo sentimos, el usuario no esta registrado');
-        if ($user->roles->first()->id == 4 || $user->roles->first()->id == 5) {
+        if ($user->roles->first()->id == 5) {
             $validator = Validator::make($request->only(['email', 'password']), ['email' => 'required|email', 'password' => 'required']);
             return ($validator->fails()) ?
                 $this->response->errorResponse($validator->errors()) :
@@ -63,12 +62,7 @@ class AuthController extends Controller
     // Metodo para cerrar sesion
     public function logout(Request $request)
     {
-        try {
-            JWTAuth::invalidate(JWTAuth::parseToken($request->token));
-            return $this->response->successResponse('message', 'Cierre de sesión correcto');
-        } catch (Exception $e) {
-            return $this->response->errorResponse('Token inválido');
-        }
+        return $this->response->logout($request->token, true);
     }
     // Metodo para iniciar sesion, delvuelve el token
     private function getToken($request, $user)

@@ -8,11 +8,12 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class ResponsesAndLogout
 {
     // Metodo para cerrar sesion
-    public function logout($token)
+    public function logout($token, $session = false)
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($token));
-            return $this->errorResponse('Token invalido');
+            return $session ? $this->successResponse('message', 'Cierre de sesión correcto') :
+                $this->errorResponse('Token invalido');
         } catch (Exception $e) {
             return $this->errorResponse('Token invalido');
         }
