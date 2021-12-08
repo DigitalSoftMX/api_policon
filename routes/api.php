@@ -9,7 +9,7 @@ Route::get('logout', 'Api\AuthController@logout');
 Route::post('password/email', 'Auth\ForgotPasswordController@sendResetLinkEmail');
 // Rutas para ver y editar perfiles de cliente y despachador
 Route::group(['middleware' => 'jwtAuth'], function () {
-    Route::get('profile', 'Api\UserController@index');
+    Route::get('profile', 'Api\UserController@edit');
     Route::post('profile/update', 'Api\UserController@update');
 });
 //Rutas para los usuarios tipo cliente

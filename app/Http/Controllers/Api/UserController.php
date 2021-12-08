@@ -16,18 +16,13 @@ class UserController extends Controller
         $this->user = auth()->user();
         $this->response = $response;
         $this->validate = $validate;
-        if ($this->user and $this->user->roles->first()->id == 5) {
-            $this->client = $this->user->client;
-        } else {
+
+        $this->user and $this->user->roles->first()->id == 5 ?
+            $this->client = $this->user->client :
             $this->response->logout(JWTAuth::getToken());
-        }
     }
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
+
+    public function edit()
     {
         $data['id'] = $this->user->id;
         $data['name'] = $this->user->name;
