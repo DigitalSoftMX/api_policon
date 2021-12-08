@@ -23,11 +23,9 @@ class ClientController extends Controller
     {
         $this->validate = $validation;
         $this->user = auth()->user();
-        if (!$this->user || $this->user->roles->first()->id != 5) {
-            $this->validate->logout(JWTAuth::getToken());
-        } else {
+        !$this->user || $this->user->roles->first()->id != 5 ?
+            $this->validate->logout(JWTAuth::getToken()) :
             $this->client = $this->user->client;
-        }
     }
     // funcion para obtener informacion del usuario hacia la pagina princial
     public function index()
@@ -40,7 +38,7 @@ class ClientController extends Controller
             $pointsPerStation = $this->client->puntos->where('station_id', $station->id)->sum('points');
             array_push(
                 $data['stations'],
-                ['id' => $station->id, 'station' => "{$station->name}", 'points' => $pointsPerStation]
+                ['id' => $station->id, 'station' => $station->name, 'points' => $pointsPerStation]
             );
         }
         return $this->validate->successResponse('stations', $data);
@@ -66,7 +64,7 @@ class ClientController extends Controller
         $validator = Validator::make($request->only('date'), ['date' => 'required|date_format:Y-m-d']);
         if ($validator->fails()) return $this->validate->errorResponse($validator->errors());
         $points = [];
-        foreach ($this->client->paymentsQrs()->whereDate('created_at', $request->date)
+        foreach ($this->client->qrs()->whereDate('created_at', $request->date)
             ->where('station_id', $station->id)->with('status')->orderBy('created_at', 'desc')
             ->get() as $point) {
             if ($point->status_id != 2) {
@@ -111,7 +109,8 @@ class ClientController extends Controller
         if (!is_bool($validate)) return $validate;
         $period = Period::all()->last();
         if (!$period or $period->finish) {
-            return $this->validate->errorResponse('Los tickets solo se pueden escanear cuando haya iniciado una promoción');
+            return $this->validate
+                ->errorResponse('El periodo de promoción ha finalizado, pronto daremos a conocer a nuestros ganadores.');
         } else {
             if ($request->date < $period->date_start or $request->date > $period->date_end)
                 return $this->validate->errorResponse('El ticket no puede ser sumado ya que no pertenece al periodo actual');
@@ -122,7 +121,7 @@ class ClientController extends Controller
             'product' => strtoupper($request->product), 'created_at' => $request->date
         ]);
         if ($qr) {
-            $qr->update($request->except(['status_id', 'active']));
+            $qr->update($request->except(['status_id']));
         } else {
             if (SalesQr::where([['station_id', $station->id], ['sale', $request->ticket]])->exists())
                 return $this->validate->errorResponse('Este ticket ya fue registrado con anterioridad');

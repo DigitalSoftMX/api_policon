@@ -13,7 +13,7 @@ class Client extends Model
         return $this->belongsTo(User::class);
     }
     // Relacion con los escaneos QR's
-    public function paymentsQrs()
+    public function qrs()
     {
         return $this->hasMany(SalesQr::class);
     }
