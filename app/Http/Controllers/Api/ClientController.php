@@ -141,12 +141,15 @@ class ClientController extends Controller
             ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
         ])->exists()) {
             // Posible cambio en la suma de puntos
-            $qr->update(['points' => 10, 'status_id' => 2]);
+            $points = 10;
+            $division = intval($qr->payment / 500);
+            $points *= $division;
+            $qr->update(['points' => $points, 'status_id' => 2]);
             if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
-                $poinstation->points += 10;
+                $poinstation->points += $points;
                 $poinstation->save();
             } else {
-                Point::create($request->merge(['points' => 10])->only(['client_id', 'station_id', 'points']));
+                Point::create($request->merge(['points' => $points])->only(['client_id', 'station_id', 'points']));
             }
             return $this->validate->successResponse('message', 'Se han sumado sus puntos');
         } else {
