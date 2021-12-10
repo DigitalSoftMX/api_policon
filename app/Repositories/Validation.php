@@ -29,7 +29,7 @@ class Validation extends ResponsesAndLogout
             'station' => ['required', 'integer', 'station' => 'exists:App\Station,number_station'],
             'date' => 'required|date_format:Y-m-d H:i:s', 'ticket' => 'required|string',
             'product' => ['required', 'string', 'not_regex:/diesel|D(?:I[E\xC9]SEL|i[e\xE9]sel)/'],
-            'liters' => 'required|numeric|min:1', 'payment' => 'required|numeric|min:500',
+            'liters' => 'required|numeric', 'payment' => 'required|numeric|min:500',
             'photo' => $qr ? '' : 'required|image',
         ]);
         return $validator->fails() ? $this->errorResponse($validator->errors()) : true;
