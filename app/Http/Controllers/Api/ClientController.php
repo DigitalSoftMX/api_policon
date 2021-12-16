@@ -155,7 +155,7 @@ class ClientController extends Controller
             return $this->validate->successResponse('message', 'Se han sumado sus puntos');
         } else {
             if (ExcelSales::where([['ticket', $request->ticket], ['station_id', $station->id]])->exists()) {
-                $qr->update(['status_id' => 4]);
+                $qr->update(['status_id' => 3]);
                 return $this->validate->errorResponse('Su ticket ha sido registrado, verifique los datos para sumar sus puntos correctamente');
             }
         }
