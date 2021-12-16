@@ -137,22 +137,31 @@ class ClientController extends Controller
             })->save($path . $name);
             $qr->update(['photo' => $image . $name]);
         }
-        if (ExcelSales::where([
-            ['station_id', $station->id], ['ticket', $request->ticket], ['date', $request->date],
-            ['product', 'like', "{$request->product}%"], ['liters', $request->liters], ['payment', $request->payment],
-        ])->exists()) {
-            // Posible cambio en la suma de puntos
-            $points = 10;
-            $division = intval($qr->payment / 500);
-            $points *= $division;
-            $qr->update(['points' => $points, 'status_id' => 2]);
-            if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
-                $poinstation->points += $points;
-                $poinstation->save();
+        if (stristr($qr->sale, '0000000')) {
+
+            $sale = ExcelSales::where([
+                ['station_id', $qr->station_id], ['ticket', $qr->sale], ['date', $qr->created_at->format('Y-m-d H:i:s')],
+                ['liters', $qr->liters], ['payment', $qr->payment],
+            ])->get()->first();
+
+            if ($sale and (str_contains($qr->product, $sale->product) or str_contains($sale->product, $qr->product))) {
+                $points = 10;
+                $division = intval($qr->payment / 500);
+                $points *= $division;
+                $qr->update(['points' => $points, 'status_id' => 2]);
+                if (($poinstation = $this->client->puntos->where('station_id', $station->id)->first()) != null) {
+                    $poinstation->points += $points;
+                    $poinstation->save();
+                } else {
+                    Point::create($request->merge(['points' => $points])->only(['client_id', 'station_id', 'points']));
+                }
+                return $this->validate->successResponse('message', 'Se han sumado sus puntos');
             } else {
-                Point::create($request->merge(['points' => $points])->only(['client_id', 'station_id', 'points']));
+                if (ExcelSales::where([['ticket', $request->ticket], ['station_id', $station->id]])->exists()) {
+                    $qr->update(['status_id' => 3]);
+                    return $this->validate->errorResponse('Su ticket ha sido registrado, verifique los datos para sumar sus puntos correctamente');
+                }
             }
-            return $this->validate->successResponse('message', 'Se han sumado sus puntos');
         } else {
             if (ExcelSales::where([['ticket', $request->ticket], ['station_id', $station->id]])->exists()) {
                 $qr->update(['status_id' => 3]);
