@@ -82,7 +82,8 @@ class ClientController extends Controller
             array_push($points, $data);
             $data = [];
         }
-        return count($points) > 0 ? $this->validate->successResponse('points', $points) : $this->validate->errorResponse('Aun no tienes tickets registrados');
+        return count($points) > 0 ? $this->validate->successResponse('points', $points) :
+            $this->validate->errorResponse("No tienes tickets registrados del día {$request->date}");
     }
     // Suma de puntos por el cliente
     public function addPoints(Request $request)
