@@ -17,7 +17,7 @@ class Validation extends ResponsesAndLogout
             'second_surname' => 'required|string|min:3', 'birthdate' => $request->birthdate ? 'date_format:Y-m-d' : '',
             'email' => ['required', 'email', Rule::unique((new User)->getTable())->ignore($user->id ?? null)],
             'phone' => $request->phone ? ['min:10', Rule::unique((new User)->getTable())->ignore($user->id ?? null)] : '',
-            'password' => $user ? '' : ['required', 'string', 'min:6', 'regex:/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/'],
+            'password' => $user ? '' : ['required', 'string', 'min:6'],
             'address' => $request->address ? 'string|min:3' : '',
         ]);
         return $validator->fails() ? $this->errorResponse($validator->errors()) : true;
